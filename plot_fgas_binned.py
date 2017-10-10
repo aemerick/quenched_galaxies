@@ -52,47 +52,6 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
         _compute_and_plot(data['SAM']['mstar'], data['SAM']['mcold'], 'SAM')
         _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA')
 
-
-#        x      = data['illustris']['log_Mstar']
-#        y      = data['illustris']['log_MHI']
-#        select = (x > mass_bins[ibin]) * (x<mass_bins[ibin+1])
-#
-#        hist, bins  = np.histogram( compute_fgas(x[select], y[select]), bins = fgas_bins)
-#        A = 1.0
-#        if norm == 'fraction':
-#            A = 1.0 / np.max([1.0, np.sum(hist)])
-#        plot_histogram(ax[axind], bins, hist * A, label = 'illustris', lw = line_width)
-#        ax[axind].plot(bins[1:], hist, label = 'illustris', drawstyle = 'steps-post', lw = line_width)
-
-#        x      = data['SAM']['mstar']
-#        y      = data['SAM']['mcold']
-#        select = (x > mass_bins[ibin]) * (x < mass_bins[ibin+1])
-#
-#        hist, bins = np.histogram( compute_fgas(x[select], y[select]), bins = fgas_bins)
-#        A = 1.0
-#        if norm == 'fraction':
-#            A = 1.0 / np.max([np.sum(hist),1.0])
-#        plot_histogram(ax[axind], bins, hist * A, label = 'SAM', lw = line_width)
-#        ax[axind].plot(bins, hist, label = 'SAM', drawstyle = 'steps-post', lw = line_width)
-#
-#        x = data['MUFASA']['log_Mstar']
-#        y = data['MUFASA']['log_Mcold']
-#        select = (x > mass_bins[ibin]) * (x < mass_bins[ibin+1])
-#        hist, bins = np.histogram(compute_fgas(x[select],y[select]), bins = fgas_bins)
-#        A = 1.0
-#        if norm == 'fraction':
-#            A = 1.0 / np.max([np.sum(hist),1.0])
-#        plot_histogram(ax[axind], bins, hist * A, label = "MUFASA", lw = line_width)
-#
-#        x = np.log10( data['Brooks']['Mstar'] )
-#        y = np.log10( data['Brooks']['HI_Mass'] )
-#        select = (x > mass_bins[ibin]) * (x < mass_bins[ibin+1])
-#        hist, bins = np.histogram(compute_fgas(x[select],y[select]), bins = fgas_bins)
-#        A = 1.0
-#        if norm == 'fraction':
-#            A = 1.0 / np.max([np.sum(hist),1.0])
-#        plot_histogram(ax[axind], bins, hist * A, label = "Brooks", lw = line_width) 
-
         if log_fgas:
             ax[axind].set_xlabel(r'log(f$_{\rm gas}$)')
             ax[axind].set_xlim(np.min(fgas_bins),np.max(fgas_bins))
