@@ -24,9 +24,9 @@ colors = {'illustris' : 'C0', 'SAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'E
 data_files = {'illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
               'illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
               'illustris'         : "Illustris1_individual_galaxy_values_z0.csv",
-              'SAM'               : "SAM_group_catalog.dat",
+              'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
               'SAM_cen_and_sat'   : "SAM_group_catalog_cenANDsat.dat",
-              'Brooks'            : "brooks_updated_catalog.dat",
+              'Brooks'            : "brooks_data_day2.dat",
               'MUFASA'            : "MUFASA_GALAXY.txt"}
 
 #
@@ -90,5 +90,13 @@ for k in ['_10Myr','_1Gyr']:
     data['MUFASA']['SFR' + k][ data['MUFASA']['log_SFR' + k] == -99.0 ] = 0.0 # flag for zero
     data['MUFASA']['sSFR' + k] = data['MUFASA']['SFR' + k] / 10.0**(data['MUFASA']['log_Mstar'])
 
-# del(_data) - take off memory since we don't need this anymore
+    data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
+#    data['SAM']['sSFR' + k][ data['SAM']['log_sSFR' + k] == -
 
+# del(_data) - take off memory since we don't need this anymore
+data['Brooks']['sSFR_20Myr'] = data['Brooks']['SFR_20Myr'] / data['Brooks']['Mstar']
+data['Brooks']['sSFR_1Gyr']  = data['Brooks']['SFR_1Gyr'] / data['Brooks']['Mstar']
+data['Brooks']['log_Mstar']  = _np.log10(data['Brooks']['Mstar'])
+data['Brooks']['log_MHI']    = _np.ones(_np.size(data['Brooks']['HI_Mass'])) * -99
+data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] > 0] = _np.log10(data['Brooks']['HI_Mass'][data['Brooks']['HI_Mass']>0])
+data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] == 0.0] = -99.0
