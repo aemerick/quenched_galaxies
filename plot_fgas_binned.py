@@ -77,6 +77,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
                              data['illustris']['log_MHI'], 'illustris',ax[axind])
         _compute_and_plot(data['SAM']['mstar'], data['SAM']['mcold'], 'SAM', ax[axind])
         _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA', ax[axind])
+        _compute_and_plot(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'], 'Brooks', ax[axind])
 
         if log_fgas:
             ax[axind].set_xlabel(r'log(f$_{\rm gas}$)')
@@ -135,57 +136,66 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
              mstar_bins
     mstar_bins : stellar mass (horizontal axis) bins if using 'median' method
 
-    include_range : If None, 'median' method shows only the median line. If "IQR" or
+    include_range : If None, 'binned' method shows only median or average line. If "IQR" or
                     "std", also shades in the IQR or std (respectively) of the
                     data in the given stellar mass bin  
     """
+
+    if method == 'binned' and include_range is None:
+        inlcude_range = 'IQR'
 
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
 
     if method == 'scatter':
-        ax.scatter( data['illustris']['log_Mstar'],
-                    compute_fgas(data['illustris']['log_Mstar'],data['illustris']['log_MHI']),
+        ax.scatter( data['illustris']['log_Mstar'], data['illustris']['fgas'],
                     s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
-        ax.scatter( data['SAM']['mcold'],
-                    compute_fgas(data['SAM']['mstar'],data['SAM']['mcold']),
+        ax.scatter( data['SAM']['mcold'], data['SAM']['fgas'],
                     s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
-        ax.scatter( data['MUFASA']['log_Mstar'],
-                    compute_fgas(data['MUFASA']['log_Mstar'],data['MUFASA']['log_Mcold']),
+        ax.scatter( data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
                     s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
+        ax.scatter( data['Brooks']['log_Mstar'], data['Brooks']['fgas'],
+                    s = point_size, lw = 0, label = 'Brooks', color=colors['Brooks'], alpha = 0.5)
+
         ax.set_ylabel(r'f$_{\rm gas}$')
-    elif method == 'median':
+    elif method == 'binned':
         def _compute_median(x, y, xbins):
             # generic function to compute median and statistics
             median = np.ones(np.size(xbins)-1) * -1 # leave neg as flag
+            average = np.zeros(np.size(median))
             Q1 = np.zeros(np.size(median)); Q3 = np.zeros(np.size(median))
             std = np.zeros(np.size(median))
             for i in np.arange(np.size(xbins)-1):
                 y_select  = y[(x>=xbins[i])*(x<xbins[i+1])] 
-                if np.size(y_select) >= 3:
+                if np.size(y_select) >= 1:
                     median[i] = np.median( y_select )
+                    average[i] = np.average( y_select)
                     Q1[i]     = np.percentile( y_select, 25)
                     Q3[i]     = np.percentile( y_select, 75)
                     std[i]    = np.std(y_select)
 
-            select = median > 0
+            select = median > -1
             centers = (xbins[1:] + xbins[:-1])*0.5
-            return centers[select], median[select], std[select], Q1[select], Q3[select]
+            return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
 
 
         def _compute_and_plot(axis,xdata,ydata,xbins, label):
             # helper generic function to compute and then plot the data with fills
-            x,median,std,Q1,Q3 = _compute_median(xdata,ydata,xbins)
-            ax.plot(x,median, lw = line_width, color = colors[label], label = label)
+            x,median,std,Q1,Q3,average = _compute_median(xdata,ydata,xbins)
+
             fill_low = None ; fill_up = None
             if include_range == 'std':
                 fill_up = median + std
                 fill_low = median - std
                 fill_low[fill_low < 0] = 0
+                ax.plot(x, average, lw = line_width, color = colors[label], label = label)
+                #print label, x, average
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
                 fill_low[fill_low < 0] = 0
+                ax.plot(x, median, lw = line_width, color = colors[label], label = label)
+                #print label, x, median
 
             if not (fill_low is None):
                 axis.fill_between(x, fill_low, fill_up, facecolor = colors[label],
@@ -199,10 +209,14 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         _compute_and_plot(ax, data['SAM']['mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
         _compute_and_plot(ax, data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
                               mstar_bins, 'MUFASA')
-        ylabel = r'Median f$_{\rm gas}$'
+        _compute_and_plot(ax, data['Brooks']['log_Mstar'], data['Brooks']['fgas'], mstar_bins, 'Brooks')
+       # print data['Brooks']['log_Mstar']
+        #print data['Brooks']['fgas']
         if include_range == 'std':
+            ylabel = r'Average f$_{\rm gas}$'
             ylabel += r' with STD'
         else:
+            ylabel = r'Median f$_{\rm gas}$'
             ylabel += r' with IQR'
         ax.set_ylabel(ylabel)
         # end plot median and fill between
@@ -217,8 +231,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     # set output filename and save
     if method == 'scatter':
         outname = 'fgas_mstar_scatter'
-    elif method == 'median':
-        outname = 'fgas_mstar_median'
+    elif method == 'binned':
+        outname = 'fgas_mstar_binned'
     if include_range == 'std':
         outname = outname + '_std'
     elif include_range == 'IQR':
@@ -237,10 +251,13 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
              mstar_bins
     mstar_bins : stellar mass (horizontal axis) bins if using 'median' method
 
-    include_range : If None, 'median' method shows only the median line. If "IQR" or
+    include_range : If None, 'median' method shows only the median or averageline. If "IQR" or
                     "std", also shades in the IQR or std (respectively) of the
-                    data in the given stellar mass bin  
+                    data in the given stellar mass bin. 
     """
+
+    if (include_range is None) and method == 'binned':
+        include_range = 'IQR'
 
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
@@ -249,49 +266,56 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         x = data['illustris']['sSFR_' + ssfr_type]
         ax.scatter( np.log10(x[x>0]), data['illustris']['fgas'][x>0],
                     s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
-#        x = data['SAM']['sSFR_' + ssfr_type]
-#        ax.scatter( np.log10(x[x>0]), data['SAM']['fgas'][x>0],
-#                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
+        x = data['SAM']['sSFR_' + ssfr_type]
+        ax.scatter( np.log10(x[x>0]), data['SAM']['fgas'][x>0],
+                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
         x = data['MUFASA']['sSFR_' + ssfr_type]
         ax.scatter( np.log10(x[x>0]), data['MUFASA']['fgas'][x>0],
                     s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
+        x = data['Brooks']['sSFR_' + ssfr_type]
+        ax.scatter( np.log10(x[x>0]), data['Brooks']['fgas'][x>0], s = point_size, lw = 0,
+                                label = 'Brooks', color = colors['Brooks'], alpha = 0.5)
 
         ax.set_ylabel(r'f$_{\rm gas}$')
 
-    elif method == 'median':
+    elif method == 'binned':
         def _compute_median(x, y, xbins):
             # generic function to compute median and statistics
             median = np.ones(np.size(xbins)-1) * -1 # leave neg as flag
+            average = np.zeros(np.size(median))
             Q1 = np.zeros(np.size(median)); Q3 = np.zeros(np.size(median))
             std = np.zeros(np.size(median))
             for i in np.arange(np.size(xbins)-1):
                 y_select  = y[(x>=xbins[i])*(x<xbins[i+1])] 
-                if np.size(y_select) >= 3:
+                if np.size(y_select) >= 1:
                     median[i] = np.median( y_select )
                     Q1[i]     = np.percentile( y_select, 25)
                     Q3[i]     = np.percentile( y_select, 75)
                     std[i]    = np.std(y_select)
+                    average[i]   = np.average(y_select)
 
-            select = median > 0
+            select = median > -1
             centers = (xbins[1:] + xbins[:-1])*0.5
-            return centers[select], median[select], std[select], Q1[select], Q3[select]
+            return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
 
 
         def _compute_and_plot(axis, input_xdata, ydata,xbins, label):
             xdata = np.log10(input_xdata[input_xdata>0]) # log the ssfr's
 
             # helper generic function to compute and then plot the data with fills
-            x,median,std,Q1,Q3 = _compute_median(xdata,ydata[input_xdata>0],xbins)
-            ax.plot(x,median, lw = line_width, color = colors[label], label = label)
+            x,median,std,Q1,Q3,average = _compute_median(xdata,ydata[input_xdata>0],xbins)
+
             fill_low = None ; fill_up = None
             if include_range == 'std':
                 fill_up = median + std
                 fill_low = median - std
                 fill_low[fill_low < 0] = 0
+                ax.plot(x, average, lw = line_width, color = colors[label], label = label)
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
                 fill_low[fill_low < 0] = 0
+                ax.plot(x, median, lw = line_width, color = colors[label], label = label)
 
             if not (fill_low is None):
                 axis.fill_between(x, fill_low, fill_up, facecolor = colors[label],
@@ -308,7 +332,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
                 ye2 = median - np.percentile(zero_ssfr_fgas,25)
 
                 yerr = np.array([[ ye2, ye1]]).T
-                print yerr, np.max(zero_ssfr_fgas), np.min(zero_ssfr_fgas)
+#                print yerr, np.max(zero_ssfr_fgas), np.min(zero_ssfr_fgas)
                 ax.scatter(np.min(ssfr_bins) - 0.5, median, s = point_size*2)
 
                 ax.errorbar(np.min(ssfr_bins) - 0.5, median, yerr = yerr, markersize = point_size*4,
@@ -339,14 +363,17 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         # plot each data source
         _compute_and_plot(ax, data['illustris']['sSFR_' + ssfr_type], data['illustris']['fgas'],
                               ssfr_bins, 'illustris')
-#        _compute_and_plot(ax, data['SAM']['sSFR_ ' + ssfr_type], data['SAM']['fgas'], ssfr_bins, "SAM")
+        _compute_and_plot(ax, data['SAM']['sSFR_' + ssfr_type], data['SAM']['fgas'], ssfr_bins, "SAM")
         _compute_and_plot(ax, data['MUFASA']['sSFR_' + ssfr_type], data['MUFASA']['fgas'],
                               ssfr_bins, 'MUFASA')
+        _compute_and_plot(ax, data['Brooks']['sSFR_' + ssfr_type], data['Brooks']['fgas'], ssfr_bins, 'Brooks')
 
-        ylabel = r'Median f$_{\rm gas}$'
+
         if include_range == 'std':
+            ylabel = r'Average f$_{\rm gas}$'
             ylabel += r' with STD'
         else:
+            ylabel = r'Median f$_{\rm gas}$'
             ylabel += r' with IQR'
         ax.set_ylabel(ylabel)
         # end plot median and fill between
@@ -364,8 +391,8 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
     # set output filename and save
     if method == 'scatter':
         outname = 'fgas_ssfr_' + ssfr_type + '_scatter'
-    elif method == 'median':
-        outname = 'fgas_ssfr_' + ssfr_type + '_median'
+    elif method == 'binned':
+        outname = 'fgas_ssfr_' + ssfr_type + '_binned'
     if include_range == 'std':
         outname = outname + '_std'
     elif include_range == 'IQR':
@@ -434,8 +461,9 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
         else:
             il_ssfr_type = sSFR_type
         _compute_and_plot(data['illustris']['fgas'], data['illustris']['sSFR_' + il_ssfr_type], 'illustris',ibin)
-#        _compute_and_plot(data['SAM']['fgas'], data['SAM']['sSFR_1Gyr'], 'SAM')
+        _compute_and_plot(data['SAM']['fgas'], data['SAM']['sSFR_' + sSFR_type], 'SAM', ibin)
         _compute_and_plot(data['MUFASA']['fgas'], data['MUFASA']['sSFR_' + sSFR_type], 'MUFASA',ibin)
+        _compute_and_plot(data['Brooks']['fgas'], data['Brooks']['sSFR_' + il_ssfr_type], 'Brooks', ibin)
 
         # set appropriate axis labels and plot styles
         if ibin == 1:
@@ -464,18 +492,22 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
     plt.tight_layout()
     plt.minorticks_on()
     fig.savefig('fgas_ssfr_histogram_panel_' + sSFR_type + '.png')
+    for a1 in ax:
+        for a in a1:
+            a.set_ylim(0.0,0.2)
+    fig.savefig('fgas_ssfr_histogram_panel_' + sSFR_type + '_zoom.png')
     return
 
 
 if __name__ == "__main__":
     plot_fgas_ssfr(method = 'scatter')
-    plot_fgas_ssfr(method = 'median', include_range = 'std')
-    plot_fgas_ssfr(method = 'median', include_range = 'IQR')
+    plot_fgas_ssfr(method = 'binned', include_range = 'std')
+    plot_fgas_ssfr(method = 'binned', include_range = 'IQR')
 
 
     plot_fgas_mstar(method = 'scatter')
-    plot_fgas_mstar(method = 'median', include_range = 'std')
-    plot_fgas_mstar(method = 'median', include_range = 'IQR')
+    plot_fgas_mstar(method = 'binned', include_range = 'std')
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR')
 
 
     plot_fgas_histograms()
