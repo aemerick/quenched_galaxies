@@ -75,9 +75,9 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
 
         _compute_and_plot(data['illustris']['log_Mstar'],
                              data['illustris']['log_MHI'], 'illustris',ax[axind])
-        _compute_and_plot(data['SAM']['mstar'], data['SAM']['mcold'], 'SAM', ax[axind])
+        _compute_and_plot(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'], 'SAM', ax[axind])
         _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA', ax[axind])
-        _compute_and_plot(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'], 'Brooks', ax[axind])
+        #_compute_and_plot(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'], 'Brooks', ax[axind])
 
         if log_fgas:
             ax[axind].set_xlabel(r'log(f$_{\rm gas}$)')
@@ -150,12 +150,12 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     if method == 'scatter':
         ax.scatter( data['illustris']['log_Mstar'], data['illustris']['fgas'],
                     s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
-        ax.scatter( data['SAM']['mcold'], data['SAM']['fgas'],
+        ax.scatter( data['SAM']['log_Mcold'], data['SAM']['fgas'],
                     s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
         ax.scatter( data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
                     s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
-        ax.scatter( data['Brooks']['log_Mstar'], data['Brooks']['fgas'],
-                    s = point_size, lw = 0, label = 'Brooks', color=colors['Brooks'], alpha = 0.5)
+        #ax.scatter( data['Brooks']['log_Mstar'], data['Brooks']['fgas'],
+        #            s = point_size, lw = 0, label = 'Brooks', color=colors['Brooks'], alpha = 0.5)
 
         ax.set_ylabel(r'f$_{\rm gas}$')
     elif method == 'binned':
@@ -206,10 +206,10 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         # plot each data source
         _compute_and_plot(ax, data['illustris']['log_Mstar'], data['illustris']['fgas'],
                               mstar_bins, 'illustris')
-        _compute_and_plot(ax, data['SAM']['mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
+        _compute_and_plot(ax, data['SAM']['log_Mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
         _compute_and_plot(ax, data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
                               mstar_bins, 'MUFASA')
-        _compute_and_plot(ax, data['Brooks']['log_Mstar'], data['Brooks']['fgas'], mstar_bins, 'Brooks')
+        #_compute_and_plot(ax, data['Brooks']['log_Mstar'], data['Brooks']['fgas'], mstar_bins, 'Brooks')
        # print data['Brooks']['log_Mstar']
         #print data['Brooks']['fgas']
         if include_range == 'std':
@@ -272,9 +272,9 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         x = data['MUFASA']['sSFR_' + ssfr_type]
         ax.scatter( np.log10(x[x>0]), data['MUFASA']['fgas'][x>0],
                     s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
-        x = data['Brooks']['sSFR_' + ssfr_type]
-        ax.scatter( np.log10(x[x>0]), data['Brooks']['fgas'][x>0], s = point_size, lw = 0,
-                                label = 'Brooks', color = colors['Brooks'], alpha = 0.5)
+        #x = data['Brooks']['sSFR_' + ssfr_type]
+        #ax.scatter( np.log10(x[x>0]), data['Brooks']['fgas'][x>0], s = point_size, lw = 0,
+        #                        label = 'Brooks', color = colors['Brooks'], alpha = 0.5)
 
         ax.set_ylabel(r'f$_{\rm gas}$')
 
@@ -366,7 +366,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         _compute_and_plot(ax, data['SAM']['sSFR_' + ssfr_type], data['SAM']['fgas'], ssfr_bins, "SAM")
         _compute_and_plot(ax, data['MUFASA']['sSFR_' + ssfr_type], data['MUFASA']['fgas'],
                               ssfr_bins, 'MUFASA')
-        _compute_and_plot(ax, data['Brooks']['sSFR_' + ssfr_type], data['Brooks']['fgas'], ssfr_bins, 'Brooks')
+        # _compute_and_plot(ax, data['Brooks']['sSFR_' + ssfr_type], data['Brooks']['fgas'], ssfr_bins, 'Brooks')
 
 
         if include_range == 'std':
@@ -463,7 +463,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
         _compute_and_plot(data['illustris']['fgas'], data['illustris']['sSFR_' + il_ssfr_type], 'illustris',ibin)
         _compute_and_plot(data['SAM']['fgas'], data['SAM']['sSFR_' + sSFR_type], 'SAM', ibin)
         _compute_and_plot(data['MUFASA']['fgas'], data['MUFASA']['sSFR_' + sSFR_type], 'MUFASA',ibin)
-        _compute_and_plot(data['Brooks']['fgas'], data['Brooks']['sSFR_' + il_ssfr_type], 'Brooks', ibin)
+        #_compute_and_plot(data['Brooks']['fgas'], data['Brooks']['sSFR_' + il_ssfr_type], 'Brooks', ibin)
 
         # set appropriate axis labels and plot styles
         if ibin == 1:
