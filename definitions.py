@@ -7,6 +7,7 @@ import matplotlib as _mpl
 _mpl.use('Agg')
 
 from matplotlib import rc as _rc
+from astropy.io import fits
 
 fsize = 17
 _rc('text', usetex=False)
@@ -21,7 +22,7 @@ _data_path = _home + "Data/"
 #eagle_ms="EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt"
 #eagle_
 
-colors = {'illustris' : 'C0', 'SAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4'}
+colors = {'illustris' : 'C0', 'SAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5'}
 
 data_files = { # 'illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
                # 'illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
@@ -62,7 +63,7 @@ for k in data_files.keys():
         _data[k] = [None]*len(data_files[k])
         for i in _np.arange(len(data_files[k])):
             data_path = _data_path + data_files[k][i]
-            _data[k]  = _np.genfromtxt( data_path, delimiter = delimiters[k], skip_header = skip_headers[k], dtype = data_dtypes[k][i])
+            _data[k][i]  = _np.genfromtxt( data_path, delimiter = delimiters[k], skip_header = skip_headers[k], dtype = data_dtypes[k][i])
     else: # single data file to load
         data_path = _data_path + data_files[k]
         _data[k]  = _np.genfromtxt( data_path, delimiter = delimiters[k], skip_header = skip_headers[k], dtype = data_dtypes[k])
@@ -75,14 +76,12 @@ _data['MUFASA'] = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]
 #
 data = {}
 for k in data_files.keys():
+    data[k] = {}
     if not isinstance(data_files[k], basestring): # if multiple files
         for i in _np.arange(len(data_files[k])):
-            data[k] = {}
-            for i in _np.arange(len(data_files[k])):
-                for l in _data[k][i].dtype.names:
-                    data[k][l] = _data[k][i][l]        
+            for l in _data[k][i].dtype.names:
+                data[k][l] = _data[k][i][l]        
     else: # single data file to load
-        data[k] = {}
         for l in _data[k].dtype.names:
             data[k][l] = _data[k][l]
 
@@ -120,6 +119,19 @@ for k in data_files.keys():
 #    for l in _data[k].dtype.names:
 #        data[k][l] = _data[k][l]
 
+
+# Load up the observational sample:
+_Bradford_2015 = fits.open(_data_path + 'table_1_bradford_2015.fits')
+
+data['Bradford2015'] = {}
+Bradford_keys = {'R_eff' : 'R_EFF', 'R_eff_err' : 'R_eff_err',
+                 'MHI'   : 'M_HI' , 'Mstar'     : 'M_STAR',
+                 'Mstar_err' : 'M_STAR_ERR'}
+for k in ['R_eff', 'R_eff_err', 'MHI', 'Mstar', 'Mstar_err']:
+    data['Bradford2015'][k] =  _Bradford_2015[1].data[Bradford_keys[k]]
+data['Bradford2015']['log_Mstar'] = _np.log10(data['Bradford2015']['Mstar'])
+data['Bradford2015']['log_MHI']   = _np.log10(data['Bradford2015']['MHI'])
+
 #
 # Pre-compute some things for each data set
 #
@@ -133,6 +145,8 @@ def _compute_fgas(mstar, mgas, log = True):
 data['illustris']['fgas'] = _compute_fgas(data['illustris']['log_Mstar'], data['illustris']['log_MHI'])
 data['SAM']['fgas'] = _compute_fgas(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'])
 data['MUFASA']['fgas'] = _compute_fgas(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'])
+data['EAGLE']['fgas']  = _compute_fgas(data['EAGLE']['log_Mstar'], data['EAGLE']['log_Mcold'])
+data['Bradford2015']['fgas'] = _compute_fgas(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'])
 
 # data['Brooks']['fgas'] = _compute_fgas(data['Brooks']['Mstar'], data['Brooks']['HI_Mass'],log=False)
 

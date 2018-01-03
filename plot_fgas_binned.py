@@ -4,6 +4,7 @@ from galaxy_analysis.plot.plot_styles import plot_histogram
 import numpy as np
 import matplotlib.pyplot as plt
 
+_output_dir = './plots/'
 
 def compute_fgas(mstar, mgas, log = True):
     if log:
@@ -77,6 +78,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
                              data['illustris']['log_MHI'], 'illustris',ax[axind])
         _compute_and_plot(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'], 'SAM', ax[axind])
         _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA', ax[axind])
+        _compute_and_plot(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'], 'Bradford2015', ax[axind])
         #_compute_and_plot(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'], 'Brooks', ax[axind])
 
         if log_fgas:
@@ -120,7 +122,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
     outname = 'fgas_mstar_histogram_panel.png'
     if log_fgas:
         outname = 'log_' + outname
-    fig.savefig(outname)
+    fig.savefig(_output_dir + outname)
     return
 
 def plot_fgas_mstar(method = 'scatter', include_range = None,
@@ -154,6 +156,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                     s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
         ax.scatter( data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
                     s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
+        ax.scatter( data['Bradford2015']['log_Mstar'], data['Bradford2015']['fgas'],
+                    s = point_size, lw = 0, label = 'Bradford2015', color = colors['Bradford2015'], alpha = 0.5)
         #ax.scatter( data['Brooks']['log_Mstar'], data['Brooks']['fgas'],
         #            s = point_size, lw = 0, label = 'Brooks', color=colors['Brooks'], alpha = 0.5)
 
@@ -209,6 +213,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         _compute_and_plot(ax, data['SAM']['log_Mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
         _compute_and_plot(ax, data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
                               mstar_bins, 'MUFASA')
+        _compute_and_plot(ax, data['Bradford2015']['log_Mstar'], data['Bradford2015']['fgas'],
+                              mstar_bins, 'Bradford2015')
         #_compute_and_plot(ax, data['Brooks']['log_Mstar'], data['Brooks']['fgas'], mstar_bins, 'Brooks')
        # print data['Brooks']['log_Mstar']
         #print data['Brooks']['fgas']
@@ -237,7 +243,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         outname = outname + '_std'
     elif include_range == 'IQR':
         outname = outname + '_IQR'
-    fig.savefig(outname + '.png')
+    fig.savefig(_output_dir + outname + '.png')
 
     return
 
@@ -397,7 +403,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         outname = outname + '_std'
     elif include_range == 'IQR':
         outname = outname + '_IQR'
-    fig.savefig(outname + '.png')
+    fig.savefig(_output_dir + outname + '.png')
 
     return
 
@@ -491,11 +497,11 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
     fig.set_size_inches(ncol*5, nrow*5)
     plt.tight_layout()
     plt.minorticks_on()
-    fig.savefig('fgas_ssfr_histogram_panel_' + sSFR_type + '.png')
+    fig.savefig(_output_dir + 'fgas_ssfr_histogram_panel_' + sSFR_type + '.png')
     for a1 in ax:
         for a in a1:
             a.set_ylim(0.0,0.2)
-    fig.savefig('fgas_ssfr_histogram_panel_' + sSFR_type + '_zoom.png')
+    fig.savefig(_output_dir + 'fgas_ssfr_histogram_panel_' + sSFR_type + '_zoom.png')
     return
 
 
