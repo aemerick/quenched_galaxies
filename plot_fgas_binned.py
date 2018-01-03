@@ -44,7 +44,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
     mass_bins = 1.0 * _mass_bins
     axi,axj = 0,0
 
-    def _compute_and_plot(x, y, label, axis):
+    def _compute_and_plot(x, y, label, axis, *args, **kwargs):
 
         select = (x > mass_bins[ibin]) * (x<mass_bins[ibin+1])
 
@@ -57,29 +57,38 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
         if norm == 'fraction':
             A = 1.0 / np.max([1.0, np.sum(hist)])
 
-        plot_histogram(axis, bins, hist * A, label = label, lw = line_width)
+        plot_histogram(axis, bins, hist * A, label = label, lw = line_width, *args, **kwargs)
         return
 
-    def _plot_all(fgas, label, axis):
+    def _plot_all(fgas, label, axis, *args, **kwargs):
 
         hist, bins  = np.histogram(fgas, bins = fgas_bins)
         A = 1.0
         if norm == 'fraction':
             A = 1.0 / np.max([1.0, np.sum(hist)])
 
-        plot_histogram(axis, bins, hist * A, label = label, lw = line_width)     
+        plot_histogram(axis, bins, hist * A, label = label, lw = line_width, *args, **kwargs)
         return
 
 
     for ibin in np.arange(np.size(mass_bins) - 1):
         axind = (axi, axj)
 
-        _compute_and_plot(data['illustris']['log_Mstar'],
-                             data['illustris']['log_MHI'], 'illustris',ax[axind])
-        _compute_and_plot(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'], 'SAM', ax[axind])
-        _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA', ax[axind])
-        _compute_and_plot(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'], 'Bradford2015', ax[axind])
-        #_compute_and_plot(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'], 'Brooks', ax[axind])
+        for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+            x = data[k]['log_Mstar']
+            if 'log_MHI' in data[k].keys():
+                y = data[k]['log_MHI']
+            else:
+                y = data[k]['log_Mcold']
+
+            _compute_and_plot(x, y, k, ax[axind], color = colors[k])
+
+#        _compute_and_plot(data['illustris']['log_Mstar'],
+#                             data['illustris']['log_MHI'], 'illustris',ax[axind])
+#        _compute_and_plot(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'], 'SAM', ax[axind])
+#        _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA', ax[axind])
+#        _compute_and_plot(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'], 'Bradford2015', ax[axind])
+#        _compute_and_plot(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'], 'Brooks', ax[axind])
 
         if log_fgas:
             ax[axind].set_xlabel(r'log(f$_{\rm gas}$)')
@@ -107,9 +116,12 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
             axj = 0
             axi = axi + 1
 
-    _plot_all(data['illustris']['fgas'], 'illustris', ax[(axi,axj)])
-    _plot_all(data['SAM']['fgas'], 'SAM', ax[(axi,axj)])
-    _plot_all(data['MUFASA']['fgas'], "MUFASA", ax[(axi,axj)])
+    for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+        _plot_all(data[k]['fgas'], k, ax[(axi,axj)])
+
+#    _plot_all(data['illustris']['fgas'], 'illustris', ax[(axi,axj)])
+#    _plot_all(data['SAM']['fgas'], 'SAM', ax[(axi,axj)])
+#    _plot_all(data['MUFASA']['fgas'], "MUFASA", ax[(axi,axj)])
     ax[(axi,axj)].set_title(r'All Galaxies')
     ax[(axi,axj)].set_ylabel(ax[(0,0)].get_ylabel())
     ax[(axi,axj)].set_xlabel(ax[(0,0)].get_xlabel())
@@ -150,14 +162,19 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     fig.set_size_inches(8,8)
 
     if method == 'scatter':
-        ax.scatter( data['illustris']['log_Mstar'], data['illustris']['fgas'],
-                    s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
-        ax.scatter( data['SAM']['log_Mcold'], data['SAM']['fgas'],
-                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
-        ax.scatter( data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
-                    s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
-        ax.scatter( data['Bradford2015']['log_Mstar'], data['Bradford2015']['fgas'],
-                    s = point_size, lw = 0, label = 'Bradford2015', color = colors['Bradford2015'], alpha = 0.5)
+        for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+            x = data[k]['log_Mstar']
+            y = data[k]['fgas']
+            ax.scatter(x, y, s = point_size, lw = 0, label = k, color = colors[k], alpha = 0.5)
+
+#        ax.scatter( data['illustris']['log_Mstar'], data['illustris']['fgas'],
+#                    s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
+#        ax.scatter( data['SAM']['log_Mcold'], data['SAM']['fgas'],
+#                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
+#        ax.scatter( data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
+#                    s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
+#        ax.scatter( data['Bradford2015']['log_Mstar'], data['Bradford2015']['fgas'],
+#                    s = point_size, lw = 0, label = 'Bradford2015', color = colors['Bradford2015'], alpha = 0.5)
         #ax.scatter( data['Brooks']['log_Mstar'], data['Brooks']['fgas'],
         #            s = point_size, lw = 0, label = 'Brooks', color=colors['Brooks'], alpha = 0.5)
 
@@ -183,7 +200,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
             return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
 
 
-        def _compute_and_plot(axis,xdata,ydata,xbins, label):
+        def _compute_and_plot(axis,xdata,ydata,xbins, label, *args, **kwargs):
             # helper generic function to compute and then plot the data with fills
             x,median,std,Q1,Q3,average = _compute_median(xdata,ydata,xbins)
 
@@ -192,29 +209,38 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                 fill_up = median + std
                 fill_low = median - std
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, average, lw = line_width, color = colors[label], label = label)
+                ax.plot(x, average, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, average
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, median, lw = line_width, color = colors[label], label = label)
+                ax.plot(x, median, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, median
 
             if not (fill_low is None):
-                axis.fill_between(x, fill_low, fill_up, facecolor = colors[label],
-                                interpolate = True, lw = line_width, alpha = 0.25)
-                 
+                if 'color' in kwargs.keys():
+                    facecolor = kwargs['color']
+                else:
+                    facecolor = 'black'
+                axis.fill_between(x, fill_low, fill_up, facecolor = facecolor,
+                                interpolate = True, lw = line_width, alpha = 0.25, *args, **kwargs)
+
             return
 
         # plot each data source
-        _compute_and_plot(ax, data['illustris']['log_Mstar'], data['illustris']['fgas'],
-                              mstar_bins, 'illustris')
-        _compute_and_plot(ax, data['SAM']['log_Mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
-        _compute_and_plot(ax, data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
-                              mstar_bins, 'MUFASA')
-        _compute_and_plot(ax, data['Bradford2015']['log_Mstar'], data['Bradford2015']['fgas'],
-                              mstar_bins, 'Bradford2015')
+        for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+            x = data[k]['log_Mstar']
+            y = data[k]['fgas']
+            _compute_and_plot(ax, x, y, mstar_bins, k, color = colors[k])
+
+#        _compute_and_plot(ax, data['illustris']['log_Mstar'], data['illustris']['fgas'],
+#                              mstar_bins, 'illustris')
+#        _compute_and_plot(ax, data['SAM']['log_Mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
+#        _compute_and_plot(ax, data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
+#                              mstar_bins, 'MUFASA')
+#        _compute_and_plot(ax, data['Bradford2015']['log_Mstar'], data['Bradford2015']['fgas'],
+#                              mstar_bins, 'Bradford2015')
         #_compute_and_plot(ax, data['Brooks']['log_Mstar'], data['Brooks']['fgas'], mstar_bins, 'Brooks')
        # print data['Brooks']['log_Mstar']
         #print data['Brooks']['fgas']
@@ -269,15 +295,21 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
     fig.set_size_inches(8,8)
 
     if method == 'scatter':
-        x = data['illustris']['sSFR_' + ssfr_type]
-        ax.scatter( np.log10(x[x>0]), data['illustris']['fgas'][x>0],
-                    s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
-        x = data['SAM']['sSFR_' + ssfr_type]
-        ax.scatter( np.log10(x[x>0]), data['SAM']['fgas'][x>0],
-                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
-        x = data['MUFASA']['sSFR_' + ssfr_type]
-        ax.scatter( np.log10(x[x>0]), data['MUFASA']['fgas'][x>0],
-                    s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
+        for k in ['illustris','SAM','MUFASA','EAGLE']:
+            x = data[k]['sSFR_' + ssfr_type]
+            y = data[k]['fgas']
+
+            ax.scatter( np.log10(x[x>0]), y[x>0], s = point_size, lw = 0, label = k, alpha = 0.5, color = colors[k])
+
+#        x = data['illustris']['sSFR_' + ssfr_type]
+#        ax.scatter( np.log10(x[x>0]), data['illustris']['fgas'][x>0],
+#                    s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
+#        x = data['SAM']['sSFR_' + ssfr_type]
+#        ax.scatter( np.log10(x[x>0]), data['SAM']['fgas'][x>0],
+#                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
+#        x = data['MUFASA']['sSFR_' + ssfr_type]
+#        ax.scatter( np.log10(x[x>0]), data['MUFASA']['fgas'][x>0],
+#                    s = point_size, lw = 0, label = 'MUFASA', color=colors['MUFASA'], alpha = 0.5)
         #x = data['Brooks']['sSFR_' + ssfr_type]
         #ax.scatter( np.log10(x[x>0]), data['Brooks']['fgas'][x>0], s = point_size, lw = 0,
         #                        label = 'Brooks', color = colors['Brooks'], alpha = 0.5)
@@ -305,7 +337,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
             return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
 
 
-        def _compute_and_plot(axis, input_xdata, ydata,xbins, label):
+        def _compute_and_plot(axis, input_xdata, ydata,xbins, label, *args, **kwargs):
             xdata = np.log10(input_xdata[input_xdata>0]) # log the ssfr's
 
             # helper generic function to compute and then plot the data with fills
@@ -316,12 +348,12 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
                 fill_up = median + std
                 fill_low = median - std
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, average, lw = line_width, color = colors[label], label = label)
+                ax.plot(x, average, lw = line_width, label = label, *args, **kwargs)
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, median, lw = line_width, color = colors[label], label = label)
+                ax.plot(x, median, lw = line_width, label = label, *args, **kwargs)
 
             if not (fill_low is None):
                 axis.fill_between(x, fill_low, fill_up, facecolor = colors[label],
@@ -339,7 +371,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
 
                 yerr = np.array([[ ye2, ye1]]).T
 #                print yerr, np.max(zero_ssfr_fgas), np.min(zero_ssfr_fgas)
-                ax.scatter(np.min(ssfr_bins) - 0.5, median, s = point_size*2)
+                ax.scatter(np.min(ssfr_bins) - 0.5, median, s = point_size*2, *args, **kwargs)
 
                 ax.errorbar(np.min(ssfr_bins) - 0.5, median, yerr = yerr, markersize = point_size*4,
                             color = colors[label], elinewidth = 0.75 * line_width, capsize = 4)
@@ -367,11 +399,16 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
             return
 
         # plot each data source
-        _compute_and_plot(ax, data['illustris']['sSFR_' + ssfr_type], data['illustris']['fgas'],
-                              ssfr_bins, 'illustris')
-        _compute_and_plot(ax, data['SAM']['sSFR_' + ssfr_type], data['SAM']['fgas'], ssfr_bins, "SAM")
-        _compute_and_plot(ax, data['MUFASA']['sSFR_' + ssfr_type], data['MUFASA']['fgas'],
-                              ssfr_bins, 'MUFASA')
+        for k in ['illustris','SAM','MUFASA','EAGLE']:
+            x = data[k]['sSFR_' + ssfr_type]
+            y = data[k]['fgas']
+            _compute_and_plot(ax, x, y, ssfr_bins, k, color = colors[k])
+
+#        _compute_and_plot(ax, data['illustris']['sSFR_' + ssfr_type], data['illustris']['fgas'],
+#                              ssfr_bins, 'illustris')
+#        _compute_and_plot(ax, data['SAM']['sSFR_' + ssfr_type], data['SAM']['fgas'], ssfr_bins, "SAM")
+#        _compute_and_plot(ax, data['MUFASA']['sSFR_' + ssfr_type], data['MUFASA']['fgas'],
+#                              ssfr_bins, 'MUFASA')
         # _compute_and_plot(ax, data['Brooks']['sSFR_' + ssfr_type], data['Brooks']['fgas'], ssfr_bins, 'Brooks')
 
 
@@ -441,7 +478,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
     ssfr_bins = 1.0 * _ssfr_bins
     axi,axj = 0,0
 
-    def _compute_and_plot(fgas, ssfr, label, ibin):
+    def _compute_and_plot(fgas, ssfr, label, ibin, *args, **kwargs):
         # generic helper function to compute data and plot
         if ibin > 1:
             logssfr  = np.log10( ssfr[ssfr>0] )
@@ -455,20 +492,21 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
         hist, bins  = np.histogram( fgas_data, bins = fgas_bins)
         if norm == 'fraction':
             A = 1.0 / np.max([1.0, np.sum(hist)])
-        plot_histogram(ax[axind], bins, hist * A, label = label, lw = line_width, color = colors[label])    
+        plot_histogram(ax[axind], bins, hist * A, label = label, lw = line_width, *args, **kwargs)
 
         return
 
     for ibin in np.arange(1, np.size(ssfr_bins)): # loop over each bin / panel
         axind = (axi, axj)
 
-        if sSFR_type == '10Myr':
-            il_ssfr_type = '20Myr'
-        else:
-            il_ssfr_type = sSFR_type
-        _compute_and_plot(data['illustris']['fgas'], data['illustris']['sSFR_' + il_ssfr_type], 'illustris',ibin)
-        _compute_and_plot(data['SAM']['fgas'], data['SAM']['sSFR_' + sSFR_type], 'SAM', ibin)
-        _compute_and_plot(data['MUFASA']['fgas'], data['MUFASA']['sSFR_' + sSFR_type], 'MUFASA',ibin)
+        for k in ['illustris','SAM','MUFASA','EAGLE']:
+            x = data[k]['fgas']
+            y = data[k]['sSFR_' + sSFR_type]
+            _compute_and_plot(x, y, k, ibin, color = colors[k])
+
+#        _compute_and_plot(data['illustris']['fgas'], data['illustris']['sSFR_' + il_ssfr_type], 'illustris',ibin)
+#        _compute_and_plot(data['SAM']['fgas'], data['SAM']['sSFR_' + sSFR_type], 'SAM', ibin)
+#        _compute_and_plot(data['MUFASA']['fgas'], data['MUFASA']['sSFR_' + sSFR_type], 'MUFASA',ibin)
         #_compute_and_plot(data['Brooks']['fgas'], data['Brooks']['sSFR_' + il_ssfr_type], 'Brooks', ibin)
 
         # set appropriate axis labels and plot styles

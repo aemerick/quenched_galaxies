@@ -157,11 +157,15 @@ for k in ['_10Myr','_1Gyr']:
     data['MUFASA']['SFR' + k][ data['MUFASA']['log_SFR' + k] == -99.0 ] = 0.0 # flag for zero
     data['MUFASA']['sSFR' + k] = data['MUFASA']['SFR' + k] / 10.0**(data['MUFASA']['log_Mstar'])
 
+    data['EAGLE']['sSFR' + k] = data['EAGLE']['SFR' + k] / 10.0**(data['EAGLE']['log_Mstar'])
+    data['EAGLE']['log_sSFR' + k] = _np.log10(data['EAGLE']['sSFR' + k])
+
 for k in ['_100kyr', '_100Myr']:
     data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
 
 #    data['SAM']['sSFR' + k][ data['SAM']['log_sSFR' + k] == -
 
+data['illustris']['sSFR_10Myr'] = data['illustris']['sSFR_20Myr']
 data['SAM']['sSFR_10Myr'] = data['SAM']['sSFR_100kyr']
 data['SAM']['sSFR_1Gyr'] = data['SAM']['sSFR_100Myr']
 
@@ -172,3 +176,4 @@ data['SAM']['sSFR_1Gyr'] = data['SAM']['sSFR_100Myr']
 #data['Brooks']['log_MHI']    = _np.ones(_np.size(data['Brooks']['HI_Mass'])) * -99
 #data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] > 0] = _np.log10(data['Brooks']['HI_Mass'][data['Brooks']['HI_Mass']>0])
 #data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] == 0.0] = -99.0
+
