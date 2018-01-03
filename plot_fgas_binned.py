@@ -6,12 +6,151 @@ import matplotlib.pyplot as plt
 
 _output_dir = './plots/'
 
+MSTAR_BINS = np.arange(7.0,13.1,0.2)
+
 def compute_fgas(mstar, mgas, log = True):
     if log:
         fgas = 10**(mgas) / (10**(mstar) + 10**(mgas))
     else:
         fgas = mgas / (mstar + mgas)
     return fgas
+
+def _compute_statistics(x, y, xbins):
+    flag = -99999999
+    # generic function to compute median and statistics
+    median = np.ones(np.size(xbins)-1) * flag # leave neg as flag
+    average = np.zeros(np.size(median))
+    Q1 = np.zeros(np.size(median)); Q3 = np.zeros(np.size(median))
+    std = np.zeros(np.size(median))
+    for i in np.arange(np.size(xbins)-1):
+        y_select  = y[(x>=xbins[i])*(x<xbins[i+1])] 
+        if np.size(y_select) >= 1:
+            median[i] = np.median( y_select )
+            average[i] = np.average( y_select)
+            Q1[i]     = np.percentile( y_select, 25)
+            Q3[i]     = np.percentile( y_select, 75)
+            std[i]    = np.std(y_select)
+
+    select = median > flag
+    centers = (xbins[1:] + xbins[:-1])*0.5
+    return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
+
+
+
+def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
+                               mstar_bins = MSTAR_BINS):
+    """
+    Plot the M_HI vs. M_star relationship for all data. When M_HI is not available,
+    M_cold is used. The default behavior is to plot a scatter plot (which looks terrible),
+    but can also plot the median / average with shaded regions showing the IQR / standard
+    deviation. 
+
+
+
+    method   :  string. 'scatter' or 'binned', latter bins data with the actual values
+                determined by include_range. Default: 'scatter'
+    include_range : When method = 'binned', select either 'IQR' or 'std' to plot the 
+                    median with IQR shading or average with standard deviation shading.
+                    The default behavior, if include_range is left as None, is to 
+                    do median with IQR shading. Default : None.
+    mstar_bins : bins in logspace to use to bin by stellar mass
+    """
+
+    if method == 'binned' and include_range is None:
+        include_range = 'IQR'
+
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8,8)
+
+    if method == 'scatter':
+        for k in ['illustris','SAM','MUFASA','EAGLE','Bradford2015']:
+            x = data[k]['log_Mstar']
+            if 'log_MHI' in data[k].keys():
+                y = data[k]['log_MHI']
+            else:
+                y = data[k]['log_Mcold']
+
+            #x = x[y>-1.0]
+            #y = y[y>-1.0]  # greater than log(1 Msun) of gas
+
+            ax.scatter(x, y, s = point_size, lw = 0, label = k, color = colors[k], alpha = 0.5)
+    elif method == 'binned':
+        def _compute_and_plot(axis, xdata, ydata, xbins, label, *args, **kwargs):
+
+            # assume ydata is logged - compute stats on un-logged data
+            ydata = 10.0**(ydata)
+            #xdata = xdata[ydata>1.0] # ONLY those with gas
+            #ydata = ydata[ydata>1.0]
+
+            # helper generic function to compute and then plot the data with fills
+            x,median,std,Q1,Q3,average = _compute_statistics(xdata,ydata,xbins)
+
+            fill_low = None ; fill_up = None
+            if include_range == 'std':
+                fill_up = median + std
+                fill_low = median - std
+                fill_low[fill_low < 0] = 0
+                ax.plot(x, np.log10(average), lw = line_width, label = label, *args, **kwargs)
+                #print label, x, average
+            elif include_range == 'IQR':
+                fill_up = Q3
+                fill_low = Q1
+                fill_low[fill_low < 0] = 0
+                ax.plot(x, np.log10(median), lw = line_width, label = label, *args, **kwargs)
+                #print label, x, median
+
+            if not (fill_low is None):
+                if 'color' in kwargs.keys():
+                    facecolor = kwargs['color']
+                else:
+                    facecolor = 'black'
+                axis.fill_between(x, np.log10(fill_low), np.log10(fill_up), facecolor = facecolor,
+                                interpolate = True, lw = line_width, alpha = 0.25, *args, **kwargs)
+
+            return
+
+        # plot each data set
+        for k in ['illustris','SAM','MUFASA','EAGLE','Bradford2015']:
+            x = data[k]['log_Mstar']
+            if 'log_MHI' in data[k].keys():
+                y = data[k]['log_MHI']
+            else:
+                y = data[k]['log_Mcold']
+ 
+            # function assumes that y is logged
+            _compute_and_plot(ax, x, y, mstar_bins, k, color = colors[k])
+
+        if include_range == 'std':
+            ylabel = r'log(Average M$_{\rm gas}$/M$_{\odot}$)'
+            ylabel += r' with STD'
+        else:
+            ylabel = r'log(Median M$_{\rm gas}$/M$_{\odot}$)'
+            ylabel += r' with IQR'
+        ax.set_ylabel(ylabel)
+
+
+    # axis labels and legend
+    ax.legend(loc = 'best')
+    ax.set_xlabel(r'log( M$_{\rm *}$ / M$_{\odot}$)')
+    plt.minorticks_on()
+    ax.set_ylim(7, 11.4)
+    ax.set_xlim(7, 12.75)
+    if method == 'scatter':
+        outname = 'MHI_Mstar_scatter'
+    elif method == 'binned':
+        outname = 'MHI_Mstar_binned'
+
+    if include_range == 'IQR':
+        outname += '_IQR'
+    elif include_range == 'std':
+        outname += '_std'
+
+    ax.plot(ax.get_xlim(), ax.get_ylim(), lw = 0.5*line_width, ls = '--', color = 'black')
+
+    fig.savefig(_output_dir + outname + '.png')
+
+    return
+    
 
 def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
                          fgas_bins = np.arange(0,1.05,0.025) , norm = 'fraction',
@@ -117,7 +256,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
             axi = axi + 1
 
     for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
-        _plot_all(data[k]['fgas'], k, ax[(axi,axj)])
+        _plot_all(data[k]['fgas'], k, ax[(axi,axj)], color = colors[k])
 
 #    _plot_all(data['illustris']['fgas'], 'illustris', ax[(axi,axj)])
 #    _plot_all(data['SAM']['fgas'], 'SAM', ax[(axi,axj)])
@@ -138,7 +277,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
     return
 
 def plot_fgas_mstar(method = 'scatter', include_range = None,
-                    mstar_bins = np.arange(8.0,13.1,0.1) ):
+                    mstar_bins = MSTAR_BINS, log_fgas = False):
     """
     Plot fgas as function of stellar mass for all data. Default behavior is to
     make a scatter plot (which looks terrible). Alternatively, can plot median
@@ -165,6 +304,9 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
             x = data[k]['log_Mstar']
             y = data[k]['fgas']
+
+            if log_fgas:
+                y = np.log10(y)
             ax.scatter(x, y, s = point_size, lw = 0, label = k, color = colors[k], alpha = 0.5)
 
 #        ax.scatter( data['illustris']['log_Mstar'], data['illustris']['fgas'],
@@ -180,41 +322,48 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
 
         ax.set_ylabel(r'f$_{\rm gas}$')
     elif method == 'binned':
-        def _compute_median(x, y, xbins):
-            # generic function to compute median and statistics
-            median = np.ones(np.size(xbins)-1) * -1 # leave neg as flag
-            average = np.zeros(np.size(median))
-            Q1 = np.zeros(np.size(median)); Q3 = np.zeros(np.size(median))
-            std = np.zeros(np.size(median))
-            for i in np.arange(np.size(xbins)-1):
-                y_select  = y[(x>=xbins[i])*(x<xbins[i+1])] 
-                if np.size(y_select) >= 1:
-                    median[i] = np.median( y_select )
-                    average[i] = np.average( y_select)
-                    Q1[i]     = np.percentile( y_select, 25)
-                    Q3[i]     = np.percentile( y_select, 75)
-                    std[i]    = np.std(y_select)
-
-            select = median > -1
-            centers = (xbins[1:] + xbins[:-1])*0.5
-            return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
-
 
         def _compute_and_plot(axis,xdata,ydata,xbins, label, *args, **kwargs):
             # helper generic function to compute and then plot the data with fills
-            x,median,std,Q1,Q3,average = _compute_median(xdata,ydata,xbins)
+            if log_fgas and False:
+                xdata = xdata[ydata>1.0E-10]
+                ydata = ydata[ydata>1.0E-10]
+#                ydata = np.log10(ydata)
+
+#            x,median,std,Q1,Q3,average = _compute_statistics(xdata,10.0**(ydata),xbins)
+#            print 'median', label, np.log10(median)
+            x,median,std,Q1,Q3,average = _compute_statistics(xdata,ydata,xbins)  
+#            print 'median', label, median          
 
             fill_low = None ; fill_up = None
             if include_range == 'std':
                 fill_up = median + std
                 fill_low = median - std
-                fill_low[fill_low < 0] = 0
+                if True:
+                    fill_low[fill_low < 0] = 0
+                if log_fgas: # and False:
+                    fill_up  = np.log10(fill_up)
+                    fill_low[fill_low == 0.0] = 1.0E-10 * fill_up[fill_low == 0.0] # need to do somehing here
+                    fill_low = np.log10(fill_low)
+                    average  = np.log10(average)
+
                 ax.plot(x, average, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, average
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
-                fill_low[fill_low < 0] = 0
+                if True:
+                    fill_low[fill_low < 0] = 0
+ 
+                # print label, np.min(ydata), np.max(ydata), np.min(Q1), np.max(Q3), np.size(ydata[ydata<1.0E-4])
+                # print label, Q1
+                # print label, Q3
+
+                if log_fgas: # and False:
+                    fill_up = np.log10(fill_up)
+                    fill_low = np.log10(fill_low)
+                    median   = np.log10(median)
+
                 ax.plot(x, median, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, median
 
@@ -223,6 +372,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                     facecolor = kwargs['color']
                 else:
                     facecolor = 'black'
+
                 axis.fill_between(x, fill_low, fill_up, facecolor = facecolor,
                                 interpolate = True, lw = line_width, alpha = 0.25, *args, **kwargs)
 
@@ -257,8 +407,12 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     ax.legend(loc='best')
     ax.set_xlabel(r'log( M$_{\rm *}$ / M$_{\odot}$)')
     plt.minorticks_on()
-    ax.set_ylim(0,1.0)
-    ax.set_xlim(8,12.75)
+    if log_fgas:
+        ax.set_ylim(-4, 0)
+    else:
+        ax.set_ylim(0,1.0)
+    ax.set_xlim(7,12.75)
+    plt.tight_layout()
 
     # set output filename and save
     if method == 'scatter':
@@ -269,6 +423,10 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         outname = outname + '_std'
     elif include_range == 'IQR':
         outname = outname + '_IQR'
+
+    if log_fgas:
+        outname += '_logged'
+
     fig.savefig(_output_dir + outname + '.png')
 
     return
@@ -317,31 +475,12 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         ax.set_ylabel(r'f$_{\rm gas}$')
 
     elif method == 'binned':
-        def _compute_median(x, y, xbins):
-            # generic function to compute median and statistics
-            median = np.ones(np.size(xbins)-1) * -1 # leave neg as flag
-            average = np.zeros(np.size(median))
-            Q1 = np.zeros(np.size(median)); Q3 = np.zeros(np.size(median))
-            std = np.zeros(np.size(median))
-            for i in np.arange(np.size(xbins)-1):
-                y_select  = y[(x>=xbins[i])*(x<xbins[i+1])] 
-                if np.size(y_select) >= 1:
-                    median[i] = np.median( y_select )
-                    Q1[i]     = np.percentile( y_select, 25)
-                    Q3[i]     = np.percentile( y_select, 75)
-                    std[i]    = np.std(y_select)
-                    average[i]   = np.average(y_select)
-
-            select = median > -1
-            centers = (xbins[1:] + xbins[:-1])*0.5
-            return centers[select], median[select], std[select], Q1[select], Q3[select], average[select]
-
 
         def _compute_and_plot(axis, input_xdata, ydata,xbins, label, *args, **kwargs):
             xdata = np.log10(input_xdata[input_xdata>0]) # log the ssfr's
 
             # helper generic function to compute and then plot the data with fills
-            x,median,std,Q1,Q3,average = _compute_median(xdata,ydata[input_xdata>0],xbins)
+            x,median,std,Q1,Q3,average = _compute_statistics(xdata,ydata[input_xdata>0],xbins)
 
             fill_low = None ; fill_up = None
             if include_range == 'std':
@@ -544,6 +683,10 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
 
 if __name__ == "__main__":
+    plot_gas_mass_stellar_mass(method = 'scatter')
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'std')
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR')
+
     plot_fgas_ssfr(method = 'scatter')
     plot_fgas_ssfr(method = 'binned', include_range = 'std')
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR')
@@ -552,7 +695,8 @@ if __name__ == "__main__":
     plot_fgas_mstar(method = 'scatter')
     plot_fgas_mstar(method = 'binned', include_range = 'std')
     plot_fgas_mstar(method = 'binned', include_range = 'IQR')
-
+    plot_fgas_mstar(method = 'binned', include_range = 'std', log_fgas = True)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True)
 
     plot_fgas_histograms()
     plot_fgas_histograms(fgas_bins = np.arange(-4, 0.1, 0.1) , log_fgas = True)
