@@ -71,6 +71,7 @@ for k in data_files.keys():
 # Filter out some things for specific data sets before making into a dictionary
 _data['MUFASA'] = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]
 
+
 #
 # now for each case, stitch together the files using
 #
@@ -177,3 +178,14 @@ data['SAM']['sSFR_1Gyr'] = data['SAM']['sSFR_100Myr']
 #data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] > 0] = _np.log10(data['Brooks']['HI_Mass'][data['Brooks']['HI_Mass']>0])
 #data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] == 0.0] = -99.0
 
+
+#
+# SANDBOX: play with some of the data here to see what happens
+#
+f_HI = 0.735
+HI_APPROXIMATION = True
+if HI_APPROXIMATION: # compute M_HI from M_cold
+    print "CAUTION: HI Approximation on - cold gas mass converted to HI with constant factor of ", f_HI
+    for k in data.keys():
+        if not 'log_MHI' in data[k].keys():
+            data[k]['log_MHI'] = data[k]['log_Mcold'] + _np.log10(f_HI)
