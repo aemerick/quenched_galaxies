@@ -22,11 +22,13 @@ _data_path = _home + "Data/"
 #eagle_ms="EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt"
 #eagle_
 
-colors = {'illustris' : 'C0', 'SAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5'}
+colors = {'Illustris' : 'C0', 'SAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5'}
 
-data_files = { # 'illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
-               # 'illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
-              'illustris'         : "Illustris1_individual_galaxy_values_z0.csv",
+data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
+               # 'Illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
+#              'Illustris'         :   "Illustris1_individual_galaxy_values_z0.csv",
+              'Illustris'         : ['Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv',
+                                     'project3_Illustris1_individual_galaxy_values_all1e8Msunh_z0.csv'],
               'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
               #'SAM_cen_and_sat'   : "SAM_group_catalog_cenANDsat.dat",
               #'Brooks'            : "brooks_data_day2.dat",
@@ -38,7 +40,8 @@ data_files = { # 'illustris_extended': "Illustris1_extended_individual_galaxy_va
 data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mcold'], 'formats' : ['f8','f8','f8']}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'StellarRhalf', 'log_Mstar', 'log_Mstar1Rhalf', 'log_Mstar2Rhalf'], 'formats':['f8']*6}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr'], 'formats' : ['f8','f8','f8','f8','f8']})],
-               'illustris' :   _np.dtype( {'names' : ['log_Mstar','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_MBH'], 'formats': ['f8','f8','f8','f8','f8','f8']}),
+               'Illustris' : [ _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI','Z_SF_gas','log_MBH','cen_sat'], 'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']}),
+                               _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh'], 'formats' : ['f8']*13})],
                'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
                'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']})
               }
@@ -46,7 +49,7 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 
 delimiters = {} # assign delimiters and exceptions
 for k in data_dtypes.keys():
     delimiters[k] = None
-delimiters['illustris']  = ','
+delimiters['Illustris']  = ','
 
 skip_headers = {} # assign skip headers and exceptions
 for k in data_dtypes.keys():
@@ -69,7 +72,10 @@ for k in data_files.keys():
         _data[k]  = _np.genfromtxt( data_path, delimiter = delimiters[k], skip_header = skip_headers[k], dtype = data_dtypes[k])
 
 # Filter out some things for specific data sets before making into a dictionary
-_data['MUFASA'] = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]
+_data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]             # remove satellites
+
+_data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1]       # remove satellites
+_data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
 
 
 #
@@ -89,15 +95,15 @@ for k in data_files.keys():
 
 #_dt = _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI', 'Z_SF','log_MBH','ic_subfind'],
 #                'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']})
-#_data['illustris_extended'] = _np.genfromtxt(data_files['illustris_extended'], delimiter=',', skip_header = 1, dtype =_dt)
+#_data['Illustris_extended'] = _np.genfromtxt(data_files['Illustris_extended'], delimiter=',', skip_header = 1, dtype =_dt)
 
 #_dt = _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI', 'Z_SF','log_MBH'],
 #                'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8']})
-#_data['illustris_extended']          = _np.genfromtxt(data_files['illustris_extended'],delimiter=',',skip_header=1,dtype=_dt)
+#_data['Illustris_extended']          = _np.genfromtxt(data_files['Illustris_extended'],delimiter=',',skip_header=1,dtype=_dt)
 
 #_dt = _np.dtype( {'names' : ['log_Mstar','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_MBH'],
 #                'formats': ['f8','f8','f8','f8','f8','f8']})
-#_data['illustris']          = _np.genfromtxt(data_files['illustris'],delimiter=',',skip_header=1,dtype=_dt)
+#_data['Illustris']          = _np.genfromtxt(data_files['Illustris'],delimiter=',',skip_header=1,dtype=_dt)
 
 #for x in [k for k in data_files.keys() if 'SAM' in k]:
 #    _data[x] = _np.genfromtxt(data_files[x], names = True)
@@ -143,7 +149,7 @@ def _compute_fgas(mstar, mgas, log = True):
         fgas = mgas / (mstar + mgas)
     return fgas
 
-data['illustris']['fgas'] = _compute_fgas(data['illustris']['log_Mstar'], data['illustris']['log_MHI'])
+data['Illustris']['fgas'] = _compute_fgas(data['Illustris']['log_Mstar'], data['Illustris']['log_MHI'])
 data['SAM']['fgas'] = _compute_fgas(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'])
 data['MUFASA']['fgas'] = _compute_fgas(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'])
 data['EAGLE']['fgas']  = _compute_fgas(data['EAGLE']['log_Mstar'], data['EAGLE']['log_Mcold'])
@@ -166,7 +172,7 @@ for k in ['_100kyr', '_100Myr']:
 
 #    data['SAM']['sSFR' + k][ data['SAM']['log_sSFR' + k] == -
 
-data['illustris']['sSFR_10Myr'] = data['illustris']['sSFR_20Myr']
+data['Illustris']['sSFR_10Myr'] = data['Illustris']['sSFR_20Myr']
 data['SAM']['sSFR_10Myr'] = data['SAM']['sSFR_100kyr']
 data['SAM']['sSFR_1Gyr'] = data['SAM']['sSFR_100Myr']
 
@@ -189,3 +195,29 @@ if HI_APPROXIMATION: # compute M_HI from M_cold
     for k in data.keys():
         if not 'log_MHI' in data[k].keys():
             data[k]['log_MHI'] = data[k]['log_Mcold'] + _np.log10(f_HI)
+#9.198402130492678, 9.363957597173144
+#9.629826897470041, 9.45583038869258
+#10.145139813581894, 9.51590106007067
+#10.624500665778964, 9.614840989399292
+#11.083888149134488, 9.671378091872791
+
+
+# Points are approximate only, and should be used with care.
+#
+# From Cantinella et. al. 2013 and Brown et. al. 2015
+#   as taken from a plot digitizer from points in Fig. 4
+#   of Crain et. al. 2016 (EAGLE HI in galaxies paper)
+#
+
+cantinella_13 = {'log_Mstar': _np.array([10.1251, 10.3728, 10.6289, 10.86818, 11.12782]),
+                 'log_MHI': _np.array([9.5548, 9.5548, 9.67491, 9.64664, 9.752650])}
+cantinella_13['MHI']   = 10**(cantinella_13['log_MHI'])
+cantinella_13['Mstar'] = 10**(cantinella_13['log_Mstar'])
+cantinella_13['fgas']      = _compute_fgas(cantinella_13['log_Mstar'], cantinella_13['log_MHI'])
+
+brown_15 = {'log_Mstar' : _np.array([9.1984, 9.6298, 10.1451, 10.6245, 11.08389]),
+            'log_MHI'   : _np.array([9.3639, 9.45583, 9.51590, 9.61484, 9.67378])}
+brown_15['MHI']   = 10.0**(brown_15['log_MHI'])
+brown_15['Mstar'] = 10.0**(brown_15['log_Mstar'])
+brown_15['fgas']  = _compute_fgas(brown_15['log_Mstar'], brown_15['log_MHI'])
+
