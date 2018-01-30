@@ -4,9 +4,13 @@ from galaxy_analysis.plot.plot_styles import plot_histogram
 import numpy as np
 import matplotlib.pyplot as plt
 
+from function_definitions import fgas_limits
+
 _output_dir = './plots/'
 
 MSTAR_BINS = np.arange(7.0,13.1,0.2)
+
+ALL_DATA = ['Illustris','SAM','MUFASA','EAGLE','Bradford2015']
 
 def compute_fgas(mstar, mgas, log = True):
     if log:
@@ -38,7 +42,9 @@ def _compute_statistics(x, y, xbins):
 
 
 def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
-                               mstar_bins = MSTAR_BINS):
+                               mstar_bins = MSTAR_BINS, remove_zero = False,
+                               rhalf = None, observational_limits = None,
+                               datasets = ALL_DATA):
     """
     Plot the M_HI vs. M_star relationship for all data. When M_HI is not available,
     M_cold is used. The default behavior is to plot a scatter plot (which looks terrible),
@@ -53,34 +59,61 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
                     median with IQR shading or average with standard deviation shading.
                     The default behavior, if include_range is left as None, is to 
                     do median with IQR shading. Default : None.
-    mstar_bins : bins in logspace to use to bin by stellar mass
+    mstar_bins  : bins in logspace to use to bin by stellar mass
+    remove_zero : filter out galaxies with NO gas mass first
+    rhalf       : Show quantities within "1" or "2" half light radii (must be 1 or 2).
+                  Default shows within virial radius. Default: None
+
+    observational_limits : apply observational limits on f_gas for better comparison
+                           to observational work. Options are 'Bradford' or None.
+
     """
 
     if method == 'binned' and include_range is None:
         include_range = 'IQR'
 
+    if not (rhalf is None):
+        rhalf_str = '%iRh'%(rhalf)
+    else:
+        rhalf_str = ''
+
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
 
     if method == 'scatter':
-        for k in ['illustris','SAM','MUFASA','EAGLE','Bradford2015']:
-            x = data[k]['log_Mstar']
+        for k in datasets:
+            x = data[k]['log_Mstar' + rhalf_str]
             if 'log_MHI' in data[k].keys():
-                y = data[k]['log_MHI']
+                y = data[k]['log_MHI' + rhalf_str]
             else:
-                y = data[k]['log_Mcold']
+                y = data[k]['log_Mcold' + rhalf_str]
+
+            if remove_zero:
+                x = x[y>-2]
+                y = y[y>-2]
+
+            if observational_limits == 'Bradford':
+                cut = fgas_limits(x, data[k]['fgas'])
+                x   = x[cut]
+                y   = y[cut]
 
             #x = x[y>-1.0]
             #y = y[y>-1.0]  # greater than log(1 Msun) of gas
 
             ax.scatter(x, y, s = point_size, lw = 0, label = k, color = colors[k], alpha = 0.5)
     elif method == 'binned':
-        def _compute_and_plot(axis, xdata, ydata, xbins, label, *args, **kwargs):
+        def _compute_and_plot(axis, xdata, ydata, fgas, xbins, label, *args, **kwargs):
 
             # assume ydata is logged - compute stats on un-logged data
             ydata = 10.0**(ydata)
-            #xdata = xdata[ydata>1.0] # ONLY those with gas
-            #ydata = ydata[ydata>1.0]
+            if remove_zero:
+                xdata = xdata[ydata>0.01] # ONLY those with gas
+                ydata = ydata[ydata>0.01]
+
+            if observational_limits == 'Bradford':
+                cut = fgas_limits(xdata, fgas)
+                xdata   = xdata[cut]
+                ydata   = ydata[cut]
 
             # helper generic function to compute and then plot the data with fills
             x,median,std,Q1,Q3,average = _compute_statistics(xdata,ydata,xbins)
@@ -110,22 +143,27 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
             return
 
         # plot each data set
-        for k in ['illustris','SAM','MUFASA','EAGLE','Bradford2015']:
-            x = data[k]['log_Mstar']
+        for k in datasets:
+            x = data[k]['log_Mstar' + rhalf_str]
             if 'log_MHI' in data[k].keys():
-                y = data[k]['log_MHI']
+                y = data[k]['log_MHI' + rhalf_str]
             else:
-                y = data[k]['log_Mcold']
+                y = data[k]['log_Mcold' + rhalf_str]
  
             # function assumes that y is logged
-            _compute_and_plot(ax, x, y, mstar_bins, k, color = colors[k])
+            _compute_and_plot(ax, x, y, data[k]['fgas'], mstar_bins, k, color = colors[k])
+
+        if not (rhalf is None):
+            rhalf_label = r' Interior to %i R_{1/2}'%(rhalf)
+        else:
+            rhalf_label = r' '
 
         if include_range == 'std':
-            ylabel = r'log(Average M$_{\rm gas}$/M$_{\odot}$)'
-            ylabel += r' with STD'
+            ylabel = r'log(Average M$_{\rm gas}$/M$_{\odot}$)' + rhalf_label
+            ylabel += r'with STD'
         else:
-            ylabel = r'log(Median M$_{\rm gas}$/M$_{\odot}$)'
-            ylabel += r' with IQR'
+            ylabel = r'log(Median M$_{\rm gas}$/M$_{\odot}$)' + rhalf_label
+            ylabel += r'with IQR'
         ax.set_ylabel(ylabel)
 
 
@@ -140,12 +178,23 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
     elif method == 'binned':
         outname = 'MHI_Mstar_binned'
 
+    outname += '_' + rhalf_str
+
     if include_range == 'IQR':
         outname += '_IQR'
     elif include_range == 'std':
         outname += '_std'
 
+    if remove_zero:
+        outname += '_nonzero_gas'
+        ax.set_title(r"Galaxies with (M$_{\rm gas} > 0$)")
+
+    if observational_limits == 'Bradford':
+        outname += '_bradford_fgas_cut'
+        ax.set_title(r'With Observational f$_{\rm gas}$ Cut')
+
     ax.plot(ax.get_xlim(), ax.get_ylim(), lw = 0.5*line_width, ls = '--', color = 'black')
+
 
     fig.savefig(_output_dir + outname + '.png')
 
@@ -213,7 +262,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
     for ibin in np.arange(np.size(mass_bins) - 1):
         axind = (axi, axj)
 
-        for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+        for k in ['Illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
             x = data[k]['log_Mstar']
             if 'log_MHI' in data[k].keys():
                 y = data[k]['log_MHI']
@@ -222,8 +271,8 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
 
             _compute_and_plot(x, y, k, ax[axind], color = colors[k])
 
-#        _compute_and_plot(data['illustris']['log_Mstar'],
-#                             data['illustris']['log_MHI'], 'illustris',ax[axind])
+#        _compute_and_plot(data['Illustris']['log_Mstar'],
+#                             data['Illustris']['log_MHI'], 'Illustris',ax[axind])
 #        _compute_and_plot(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'], 'SAM', ax[axind])
 #        _compute_and_plot(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'],'MUFASA', ax[axind])
 #        _compute_and_plot(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'], 'Bradford2015', ax[axind])
@@ -255,10 +304,10 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
             axj = 0
             axi = axi + 1
 
-    for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+    for k in ['Illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
         _plot_all(data[k]['fgas'], k, ax[(axi,axj)], color = colors[k])
 
-#    _plot_all(data['illustris']['fgas'], 'illustris', ax[(axi,axj)])
+#    _plot_all(data['Illustris']['fgas'], 'Illustris', ax[(axi,axj)])
 #    _plot_all(data['SAM']['fgas'], 'SAM', ax[(axi,axj)])
 #    _plot_all(data['MUFASA']['fgas'], "MUFASA", ax[(axi,axj)])
     ax[(axi,axj)].set_title(r'All Galaxies')
@@ -301,7 +350,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     fig.set_size_inches(8,8)
 
     if method == 'scatter':
-        for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+        for k in ['Illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
             x = data[k]['log_Mstar']
             y = data[k]['fgas']
 
@@ -309,8 +358,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                 y = np.log10(y)
             ax.scatter(x, y, s = point_size, lw = 0, label = k, color = colors[k], alpha = 0.5)
 
-#        ax.scatter( data['illustris']['log_Mstar'], data['illustris']['fgas'],
-#                    s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
+#        ax.scatter( data['Illustris']['log_Mstar'], data['Illustris']['fgas'],
+#                    s = point_size, lw = 0, label = 'Illustris', color=colors['Illustris'], alpha=0.5)
 #        ax.scatter( data['SAM']['log_Mcold'], data['SAM']['fgas'],
 #                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
 #        ax.scatter( data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
@@ -379,13 +428,13 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
             return
 
         # plot each data source
-        for k in ['illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
+        for k in ['Illustris', 'SAM', 'MUFASA', 'EAGLE', 'Bradford2015']:
             x = data[k]['log_Mstar']
             y = data[k]['fgas']
             _compute_and_plot(ax, x, y, mstar_bins, k, color = colors[k])
 
-#        _compute_and_plot(ax, data['illustris']['log_Mstar'], data['illustris']['fgas'],
-#                              mstar_bins, 'illustris')
+#        _compute_and_plot(ax, data['Illustris']['log_Mstar'], data['Illustris']['fgas'],
+#                              mstar_bins, 'Illustris')
 #        _compute_and_plot(ax, data['SAM']['log_Mstar'], data['SAM']['fgas'], mstar_bins, "SAM")
 #        _compute_and_plot(ax, data['MUFASA']['log_Mstar'], data['MUFASA']['fgas'],
 #                              mstar_bins, 'MUFASA')
@@ -453,15 +502,15 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
     fig.set_size_inches(8,8)
 
     if method == 'scatter':
-        for k in ['illustris','SAM','MUFASA','EAGLE']:
+        for k in ['Illustris','SAM','MUFASA','EAGLE']:
             x = data[k]['sSFR_' + ssfr_type]
             y = data[k]['fgas']
 
             ax.scatter( np.log10(x[x>0]), y[x>0], s = point_size, lw = 0, label = k, alpha = 0.5, color = colors[k])
 
-#        x = data['illustris']['sSFR_' + ssfr_type]
-#        ax.scatter( np.log10(x[x>0]), data['illustris']['fgas'][x>0],
-#                    s = point_size, lw = 0, label = 'illustris', color=colors['illustris'], alpha=0.5)
+#        x = data['Illustris']['sSFR_' + ssfr_type]
+#        ax.scatter( np.log10(x[x>0]), data['Illustris']['fgas'][x>0],
+#                    s = point_size, lw = 0, label = 'Illustris', color=colors['Illustris'], alpha=0.5)
 #        x = data['SAM']['sSFR_' + ssfr_type]
 #        ax.scatter( np.log10(x[x>0]), data['SAM']['fgas'][x>0],
 #                    s = point_size, lw = 0, label = 'SAM', color=colors['SAM'], alpha = 0.5)
@@ -538,13 +587,13 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
             return
 
         # plot each data source
-        for k in ['illustris','SAM','MUFASA','EAGLE']:
+        for k in ['Illustris','SAM','MUFASA','EAGLE']:
             x = data[k]['sSFR_' + ssfr_type]
             y = data[k]['fgas']
             _compute_and_plot(ax, x, y, ssfr_bins, k, color = colors[k])
 
-#        _compute_and_plot(ax, data['illustris']['sSFR_' + ssfr_type], data['illustris']['fgas'],
-#                              ssfr_bins, 'illustris')
+#        _compute_and_plot(ax, data['Illustris']['sSFR_' + ssfr_type], data['Illustris']['fgas'],
+#                              ssfr_bins, 'Illustris')
 #        _compute_and_plot(ax, data['SAM']['sSFR_' + ssfr_type], data['SAM']['fgas'], ssfr_bins, "SAM")
 #        _compute_and_plot(ax, data['MUFASA']['sSFR_' + ssfr_type], data['MUFASA']['fgas'],
 #                              ssfr_bins, 'MUFASA')
@@ -638,12 +687,12 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
     for ibin in np.arange(1, np.size(ssfr_bins)): # loop over each bin / panel
         axind = (axi, axj)
 
-        for k in ['illustris','SAM','MUFASA','EAGLE']:
+        for k in ['Illustris','SAM','MUFASA','EAGLE']:
             x = data[k]['fgas']
             y = data[k]['sSFR_' + sSFR_type]
             _compute_and_plot(x, y, k, ibin, color = colors[k])
 
-#        _compute_and_plot(data['illustris']['fgas'], data['illustris']['sSFR_' + il_ssfr_type], 'illustris',ibin)
+#        _compute_and_plot(data['Illustris']['fgas'], data['Illustris']['sSFR_' + il_ssfr_type], 'Illustris',ibin)
 #        _compute_and_plot(data['SAM']['fgas'], data['SAM']['sSFR_' + sSFR_type], 'SAM', ibin)
 #        _compute_and_plot(data['MUFASA']['fgas'], data['MUFASA']['sSFR_' + sSFR_type], 'MUFASA',ibin)
         #_compute_and_plot(data['Brooks']['fgas'], data['Brooks']['sSFR_' + il_ssfr_type], 'Brooks', ibin)
@@ -684,8 +733,9 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
 if __name__ == "__main__":
     plot_gas_mass_stellar_mass(method = 'scatter')
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'std')
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR')
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', remove_zero = False, datasets = ['Illustris','SAM','MUFASA','EAGLE'])
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', remove_zero = True)
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford')
 
     plot_fgas_ssfr(method = 'scatter')
     plot_fgas_ssfr(method = 'binned', include_range = 'std')
