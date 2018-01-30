@@ -22,16 +22,17 @@ _data_path = _home + "Data/"
 #eagle_ms="EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt"
 #eagle_
 
-colors = {'Illustris' : 'C0', 'SAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5'}
+colors = {'Illustris' : 'C0', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5'}
 
 data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
                # 'Illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
 #              'Illustris'         :   "Illustris1_individual_galaxy_values_z0.csv",
               'Illustris'         : ['Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv',
                                      'project3_Illustris1_individual_galaxy_values_all1e8Msunh_z0.csv'],
-              'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
+              #'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
+              'SCSAM'                : 'newSCSAMgalprop.dat',
               #'SAM_cen_and_sat'   : "SAM_group_catalog_cenANDsat.dat",
-              #'Brooks'            : "brooks_data_day2.dat",
+              'Brooks'            : ["brooks_updated_catalog.dat","brooks.cca.centrals_info.dat"],
               'MUFASA'            : "MUFASA_GALAXY.txt",
               'EAGLE'             : ['EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt', 
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
@@ -42,8 +43,12 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr'], 'formats' : ['f8','f8','f8','f8','f8']})],
                'Illustris' : [ _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI','Z_SF_gas','log_MBH','cen_sat'], 'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']}),
                                _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh'], 'formats' : ['f8']*13})],
-               'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
-               'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']})
+               #'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
+               'SCSAM' : None, # load elsewhere
+
+               'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']}),
+               'Brooks'    : [ _np.dtype( {'names' : ['Sim','Grp','Mstar','Mvir','SFR_10Myr','SFR_1Gyr','time_last_SF','MHI', 'X','Y','Z','VX','VY','VZ','parent'], 'formats' : ['U5','U3'] + ['f8']*12 + ['u1']}),
+                               _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})]
               }
 
 delimiters = {} # assign delimiters and exceptions
@@ -77,6 +82,29 @@ _data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]          
 _data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1]       # remove satellites
 _data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
 
+#  Collate the two Brooks data sets together grabbing only centrals that 
+#  exist in both files
+#  - kinda gross, but only option really
+#
+
+# generate list of unique names for all galaxies (Sim name + group number)
+full_names = [None,None]
+for i in [0,1]:
+    full_names[i] = [str(_data['Brooks'][i]['Sim'][j])  + str(_data['Brooks'][i]['Grp'][j]) for j in _np.arange(_np.size(_data['Brooks'][i]['Sim']))]
+
+#  Cross-match: second data set is centrals only --- remove entries from first data set if they DNE in second
+select = _np.zeros(_np.size(full_names[0]))
+for i,k in enumerate(full_names[0]):
+    select[i] = (k in full_names[1])
+select = select.astype(bool)
+_data['Brooks'][0] = _data['Brooks'][0][ select ]
+
+
+# load scdata
+scdata = _np.genfromtxt('./Data/newSCSAMgalprop.dat', names = True, skip_header = 46)
+scdata = scdata[scdata['sat_type'] == 0]
+scdata = scdata[scdata['mstar'] > 0]
+_data['SCSAM'] = scdata
 
 #
 # now for each case, stitch together the files using
@@ -92,39 +120,40 @@ for k in data_files.keys():
         for l in _data[k].dtype.names:
             data[k][l] = _data[k][l]
 
+# screw with SCSAM data
+data['SCSAM']['Mhalo']       = data['SCSAM']['mhalo']        * 1.0E9
+data['SCSAM']['Mstar']       = data['SCSAM']['mstar']        * 1.0E9
+data['SCSAM']['Mcold']       = data['SCSAM']['mcold']        * 1.0E9
+data['SCSAM']['SFR_20Myr']   = data['SCSAM']['sfr_ave20M']
+data['SCSAM']['SFR_100Myr']  = data['SCSAM']['sfr_ave100M']
+data['SCSAM']['SFR_1Gyr']    = data['SCSAM']['sfr_ave1G']
+data['SCSAM']['sSFR_100Myr'] = data['SCSAM']['SFR_100Myr']   / data['SCSAM']['Mstar']
+data['SCSAM']['sSFR_1Gyr']   = data['SCSAM']['SFR_1Gyr']     / data['SCSAM']['Mstar']
+data['SCSAM']['sSFR_20Myr']  = data['SCSAM']['SFR_20Myr']    / data['SCSAM']['Mstar']
 
-#_dt = _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI', 'Z_SF','log_MBH','ic_subfind'],
-#                'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']})
-#_data['Illustris_extended'] = _np.genfromtxt(data_files['Illustris_extended'], delimiter=',', skip_header = 1, dtype =_dt)
 
-#_dt = _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI', 'Z_SF','log_MBH'],
-#                'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8']})
-#_data['Illustris_extended']          = _np.genfromtxt(data_files['Illustris_extended'],delimiter=',',skip_header=1,dtype=_dt)
+for k in ['SFR_100Myr','sSFR_100Myr','SFR_1Gyr','sSFR_1Gyr', 'Mhalo','Mstar','Mcold']:
+    data['SCSAM']['log_' + k] = _np.log10(data['SCSAM'][k])
 
-#_dt = _np.dtype( {'names' : ['log_Mstar','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_MBH'],
-#                'formats': ['f8','f8','f8','f8','f8','f8']})
-#_data['Illustris']          = _np.genfromtxt(data_files['Illustris'],delimiter=',',skip_header=1,dtype=_dt)
+# compute some things for Brooks dataset:
+data['Brooks']['SFR_100Myr']     = data['Brooks']['Mstar_100Myr']     / ( 100.0E6)  #  SFR in Msun / yr
+data['Brooks']['SFR_100Myr_1Rh'] = data['Brooks']['Mstar_100Myr_1Rh'] / ( 100.0E6)
+data['Brooks']['SFR_100Myr_2Rh'] = data['Brooks']['Mstar_100Myr_2Rh'] / ( 100.0E6)
+data['Brooks']['SFR_1Gyr_1Rh']   = data['Brooks']['Mstar_1Gyr_1Rh']   / (1000.0E6)
+data['Brooks']['SFR_1Gyr_2Rh']   = data['Brooks']['Mstar_1Gyr_2Rh']   / (1000.0E6)
+data['Brooks']['sSFR_100Myr']     = data['Brooks']['SFR_100Myr']     / data['Brooks']['Mstar']
+data['Brooks']['sSFR_1Gyr']     = data['Brooks']['SFR_1Gyr']     / data['Brooks']['Mstar']
+data['Brooks']['sSFR_100Myr_1Rh'] = data['Brooks']['SFR_100Myr_1Rh'] / data['Brooks']['Mstar_1Rh']
+data['Brooks']['sSFR_100Myr_2Rh'] = data['Brooks']['SFR_100Myr_2Rh'] / data['Brooks']['Mstar_2Rh']
+data['Brooks']['sSFR_1Gyr_1Rh']   = data['Brooks']['SFR_1Gyr_1Rh']   / data['Brooks']['Mstar_1Rh']
+data['Brooks']['sSFR_1Gyr_2Rh']   = data['Brooks']['SFR_1Gyr_2Rh']   / data['Brooks']['Mstar_2Rh']
 
-#for x in [k for k in data_files.keys() if 'SAM' in k]:
-#    _data[x] = _np.genfromtxt(data_files[x], names = True)
+for k in ['sSFR_100Myr','sSFR_1Gyr','sSFR_100Myr_1Rh','sSFR_1Gyr_2Rh', 'sSFR_100Myr_1Rh','sSFR_1Gyr_2Rh']:
+    data['Brooks']['log_' + k] = data['Brooks'][k]
 
-# load MUFASA and remove satellites
-#_data['MUFASA'] = _np.genfromtxt(data_files['MUFASA'],names=True)
-#_data['MUFASA'] = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]
-
-# brooks
-# _data['Brooks'] = _np.genfromtxt(data_files['Brooks'], names = True)
-
-#
-# Maybe pre-compute gas fractions and things here for all the data
-#
-
-#
-#data = {} # now convert ndarrays of data into dictionaries for each data set
-#for k in _data.keys():
-#    data[k] = {}
-#    for l in _data[k].dtype.names:
-#        data[k][l] = _data[k][l]
+for k in data['Brooks'].keys():
+    if any( [x in k for x in ['MHI','Mcold','Mstar']]):
+        data['Brooks']['log_' + k] = _np.log10(data['Brooks'][k])
 
 
 # Load up the observational sample:
@@ -150,12 +179,12 @@ def _compute_fgas(mstar, mgas, log = True):
     return fgas
 
 data['Illustris']['fgas'] = _compute_fgas(data['Illustris']['log_Mstar'], data['Illustris']['log_MHI'])
-data['SAM']['fgas'] = _compute_fgas(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'])
+#data['SAM']['fgas'] = _compute_fgas(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'])
 data['MUFASA']['fgas'] = _compute_fgas(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'])
 data['EAGLE']['fgas']  = _compute_fgas(data['EAGLE']['log_Mstar'], data['EAGLE']['log_Mcold'])
 data['Bradford2015']['fgas'] = _compute_fgas(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'])
-
-# data['Brooks']['fgas'] = _compute_fgas(data['Brooks']['Mstar'], data['Brooks']['HI_Mass'],log=False)
+data['Brooks']['fgas'] = _compute_fgas(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'])
+data['SCSAM']['fgas'] = _compute_fgas(data['SCSAM']['log_Mstar'], data['SCSAM']['log_Mcold'])
 
 #
 #
@@ -167,23 +196,11 @@ for k in ['_10Myr','_1Gyr']:
     data['EAGLE']['sSFR' + k] = data['EAGLE']['SFR' + k] / 10.0**(data['EAGLE']['log_Mstar'])
     data['EAGLE']['log_sSFR' + k] = _np.log10(data['EAGLE']['sSFR' + k])
 
-for k in ['_100kyr', '_100Myr']:
-    data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
+#for k in ['_100kyr', '_100Myr']:
+#    data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
 
-#    data['SAM']['sSFR' + k][ data['SAM']['log_sSFR' + k] == -
 
 data['Illustris']['sSFR_10Myr'] = data['Illustris']['sSFR_20Myr']
-data['SAM']['sSFR_10Myr'] = data['SAM']['sSFR_100kyr']
-data['SAM']['sSFR_1Gyr'] = data['SAM']['sSFR_100Myr']
-
-# del(_data) - take off memory since we don't need this anymore
-#data['Brooks']['sSFR_20Myr'] = data['Brooks']['SFR_20Myr'] / data['Brooks']['Mstar']
-#data['Brooks']['sSFR_1Gyr']  = data['Brooks']['SFR_1Gyr'] / data['Brooks']['Mstar']
-#data['Brooks']['log_Mstar']  = _np.log10(data['Brooks']['Mstar'])
-#data['Brooks']['log_MHI']    = _np.ones(_np.size(data['Brooks']['HI_Mass'])) * -99
-#data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] > 0] = _np.log10(data['Brooks']['HI_Mass'][data['Brooks']['HI_Mass']>0])
-#data['Brooks']['log_MHI'][ data['Brooks']['HI_Mass'] == 0.0] = -99.0
-
 
 #
 # SANDBOX: play with some of the data here to see what happens
@@ -195,11 +212,6 @@ if HI_APPROXIMATION: # compute M_HI from M_cold
     for k in data.keys():
         if not 'log_MHI' in data[k].keys():
             data[k]['log_MHI'] = data[k]['log_Mcold'] + _np.log10(f_HI)
-#9.198402130492678, 9.363957597173144
-#9.629826897470041, 9.45583038869258
-#10.145139813581894, 9.51590106007067
-#10.624500665778964, 9.614840989399292
-#11.083888149134488, 9.671378091872791
 
 
 # Points are approximate only, and should be used with care.
