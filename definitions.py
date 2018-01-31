@@ -9,6 +9,9 @@ _mpl.use('Agg')
 from matplotlib import rc as _rc
 from astropy.io import fits
 
+from quenched_galaxies.function_definitions import fit_SFMS
+
+
 fsize = 17
 _rc('text', usetex=False)
 _rc('font', size=fsize)#, ftype=42)
@@ -39,7 +42,7 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
                                      'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt']}
 
 data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mcold'], 'formats' : ['f8','f8','f8']}),
-                               _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'StellarRhalf', 'log_Mstar', 'log_Mstar1Rhalf', 'log_Mstar2Rhalf'], 'formats':['f8']*6}),
+                               _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'r_half', 'log_Mstar', 'log_Mstar_1Rh', 'log_Mstar_2Rh'], 'formats':['f8']*6}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr'], 'formats' : ['f8','f8','f8','f8','f8']})],
                'Illustris' : [ _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI','Z_SF_gas','log_MBH','cen_sat'], 'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']}),
                                _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh'], 'formats' : ['f8']*13})],
@@ -131,6 +134,15 @@ data['SCSAM']['sSFR_100Myr'] = data['SCSAM']['SFR_100Myr']   / data['SCSAM']['Ms
 data['SCSAM']['sSFR_1Gyr']   = data['SCSAM']['SFR_1Gyr']     / data['SCSAM']['Mstar']
 data['SCSAM']['sSFR_20Myr']  = data['SCSAM']['SFR_20Myr']    / data['SCSAM']['Mstar']
 
+data['SCSAM']['log_SFR_20Myr']   = _np.log10(data['SCSAM']['sfr_ave20M'])
+data['SCSAM']['log_SFR_100Myr']  = _np.log10(data['SCSAM']['sfr_ave100M'])
+data['SCSAM']['log_SFR_1Gyr']    = _np.log10(data['SCSAM']['sfr_ave1G'])
+for k in ['20Myr','100Myr','1Gyr']:
+    data['SCSAM']['log_SFR_' + k][ data['SCSAM']['log_SFR_' + k] == -_np.inf] = -99
+
+data['SCSAM']['sSFR_10Myr'] = data['SCSAM']['sSFR_20Myr']
+data['SCSAM']['SFR_10Myr'] = data['SCSAM']['SFR_20Myr']
+data['SCSAM']['log_SFR_10Myr'] = data['SCSAM']['log_SFR_20Myr']
 
 for k in ['SFR_100Myr','sSFR_100Myr','SFR_1Gyr','sSFR_1Gyr', 'Mhalo','Mstar','Mcold']:
     data['SCSAM']['log_' + k] = _np.log10(data['SCSAM'][k])
@@ -141,6 +153,7 @@ data['Brooks']['SFR_100Myr_1Rh'] = data['Brooks']['Mstar_100Myr_1Rh'] / ( 100.0E
 data['Brooks']['SFR_100Myr_2Rh'] = data['Brooks']['Mstar_100Myr_2Rh'] / ( 100.0E6)
 data['Brooks']['SFR_1Gyr_1Rh']   = data['Brooks']['Mstar_1Gyr_1Rh']   / (1000.0E6)
 data['Brooks']['SFR_1Gyr_2Rh']   = data['Brooks']['Mstar_1Gyr_2Rh']   / (1000.0E6)
+data['Brooks']['sSFR_10Myr']     = data['Brooks']['SFR_10Myr']     / data['Brooks']['Mstar']
 data['Brooks']['sSFR_100Myr']     = data['Brooks']['SFR_100Myr']     / data['Brooks']['Mstar']
 data['Brooks']['sSFR_1Gyr']     = data['Brooks']['SFR_1Gyr']     / data['Brooks']['Mstar']
 data['Brooks']['sSFR_100Myr_1Rh'] = data['Brooks']['SFR_100Myr_1Rh'] / data['Brooks']['Mstar_1Rh']
@@ -148,12 +161,18 @@ data['Brooks']['sSFR_100Myr_2Rh'] = data['Brooks']['SFR_100Myr_2Rh'] / data['Bro
 data['Brooks']['sSFR_1Gyr_1Rh']   = data['Brooks']['SFR_1Gyr_1Rh']   / data['Brooks']['Mstar_1Rh']
 data['Brooks']['sSFR_1Gyr_2Rh']   = data['Brooks']['SFR_1Gyr_2Rh']   / data['Brooks']['Mstar_2Rh']
 
-for k in ['sSFR_100Myr','sSFR_1Gyr','sSFR_100Myr_1Rh','sSFR_1Gyr_2Rh', 'sSFR_100Myr_1Rh','sSFR_1Gyr_2Rh']:
-    data['Brooks']['log_' + k] = data['Brooks'][k]
+for k in ['sSFR_100Myr','sSFR_1Gyr','sSFR_100Myr_1Rh','sSFR_1Gyr_2Rh', 'sSFR_100Myr_1Rh','sSFR_1Gyr_2Rh', 'SFR_100Myr','SFR_1Gyr','SFR_10Myr']:
+    data['Brooks']['log_' + k] = _np.log10(data['Brooks'][k])
+    data['Brooks']['log_' + k][ data['Brooks']['log_' + k] == -_np.inf ] = -99.0
 
 for k in data['Brooks'].keys():
     if any( [x in k for x in ['MHI','Mcold','Mstar']]):
         data['Brooks']['log_' + k] = _np.log10(data['Brooks'][k])
+
+for k in ['10Myr','20Myr','1Gyr']:
+    data['Illustris']['SFR_' + k] = data['Illustris']['sSFR_' + k] * 10.0**(data['Illustris']['log_Mstar'])
+    data['Illustris']['log_SFR_' + k] = _np.log10(data['Illustris']['SFR_' + k])
+    data['Illustris']['log_SFR_' + k][ data['Illustris']['log_SFR_' + k] == -_np.inf] = -99 # flag
 
 
 # Load up the observational sample:
@@ -186,12 +205,25 @@ data['Bradford2015']['fgas'] = _compute_fgas(data['Bradford2015']['log_Mstar'], 
 data['Brooks']['fgas'] = _compute_fgas(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'])
 data['SCSAM']['fgas'] = _compute_fgas(data['SCSAM']['log_Mstar'], data['SCSAM']['log_Mcold'])
 
+for k in data.keys():
+    if ('log_Mstar_1Rh' in data[k].keys()) and (('log_MHI_1Rh' in data[k].keys()) or ('log_Mcold_1Rh' in data[k].keys())):
+        gas_key = 'log_MHI'
+        if not (gas_key in data[k].keys()):
+            gas_key = 'log_Mcold'
+
+        data[k]['fgas_1Rh'] = _compute_fgas(data[k]['log_Mstar_1Rh'], data[k][gas_key + '_1Rh'])
+        data[k]['fgas_2Rh'] = _compute_fgas(data[k]['log_Mstar_2Rh'], data[k][gas_key + '_2Rh'])
+        
+
 #
 #
 for k in ['_10Myr','_1Gyr']:
     data['MUFASA']['SFR' + k] = 10.0**(data['MUFASA']['log_SFR' + k])
     data['MUFASA']['SFR' + k][ data['MUFASA']['log_SFR' + k] == -99.0 ] = 0.0 # flag for zero
     data['MUFASA']['sSFR' + k] = data['MUFASA']['SFR' + k] / 10.0**(data['MUFASA']['log_Mstar'])
+
+    data['EAGLE']['log_SFR' + k] = _np.log10(data['EAGLE']['SFR' + k])
+    data['EAGLE']['log_SFR' + k][ data['EAGLE']['log_SFR' + k] == -_np.inf] = -99.0
 
     data['EAGLE']['sSFR' + k] = data['EAGLE']['SFR' + k] / 10.0**(data['EAGLE']['log_Mstar'])
     data['EAGLE']['log_sSFR' + k] = _np.log10(data['EAGLE']['sSFR' + k])
@@ -200,7 +232,40 @@ for k in ['_10Myr','_1Gyr']:
 #    data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
 
 
-data['Illustris']['sSFR_10Myr'] = data['Illustris']['sSFR_20Myr']
+
+
+
+#
+#
+# Fit the SFMS for each data set:
+#
+#     Be careful with this
+#
+#
+
+def _fit_sfms(sim_name, years):
+    for k in years:
+        log_mstar = data[sim_name]['log_Mstar']
+        log_sfr   = data[sim_name]['log_SFR_' + k]
+
+        # print sim_name, k, _np.min(log_sfr), _np.max(log_sfr), _np.median(log_sfr), _np.min(log_sfr[log_sfr>-99])
+        # print sim_name, k, _np.min(log_mstar), _np.max(log_mstar), _np.median(log_mstar)
+        D, m_fit, sfr_fit = fit_SFMS(log_mstar, log_sfr)
+        data[sim_name]['D_SFMS_' + k] = D
+        data[sim_name]['SFMS_fit_' + k] = [m_fit, sfr_fit]
+
+        print sim_name, k, _np.min(D), _np.min(D[D>-99]), _np.max(D), _np.median(D)
+
+    return
+
+
+_fit_sfms('Illustris', ['10Myr','20Myr','1Gyr'])
+# _fit_sfms('Brooks'   , ['100Myr','1Gyr'])
+_fit_sfms('EAGLE'    , ['10Myr','1Gyr'])
+_fit_sfms('MUFASA'   , ['10Myr','1Gyr'])
+_fit_sfms('SCSAM'    , ['20Myr','100Myr','1Gyr'])
+
+
 
 #
 # SANDBOX: play with some of the data here to see what happens
@@ -232,4 +297,5 @@ brown_15 = {'log_Mstar' : _np.array([9.1984, 9.6298, 10.1451, 10.6245, 11.08389]
 brown_15['MHI']   = 10.0**(brown_15['log_MHI'])
 brown_15['Mstar'] = 10.0**(brown_15['log_Mstar'])
 brown_15['fgas']  = _compute_fgas(brown_15['log_Mstar'], brown_15['log_MHI'])
+
 

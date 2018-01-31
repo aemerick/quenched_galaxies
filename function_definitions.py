@@ -1,5 +1,5 @@
 import numpy as _np
-
+from letstalkaboutquench import fstarforms as _fstarforms # fitting routine for SFMS
 
 def _bradford_fgas_limit(mstar):
     """
@@ -26,3 +26,44 @@ def fgas_limits(log_Mstar, fgas, obs_data = 'Bradford'):
     selection    = fgas >= fgas_cut(log_Mstar)
 
     return selection
+
+def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
+    """
+    Convenience wrapper on Chang's routine
+    """
+
+    fit = _fstarforms.fstarforms()
+
+    # set default behavior unless overridden
+    if not 'fit_range' in kwargs.keys():
+        min_bin = _np.floor(_np.min(log_mstar))
+        max_bin = _np.ceil(_np.max(log_mstar))  
+        kwargs['fit_range'] = [min_bin, max_bin]
+
+    if not 'method' in kwargs.keys():
+        kwargs['method'] = 'negbinomfit'
+
+    if not 'Nbin_thresh' in kwargs.keys():
+        kwargs['Nbin_thresh'] = 20
+
+    if not 'dlogm' in kwargs.keys():
+        kwargs['dlogm'] = 0.01
+
+    m_fit, sfr_fit = fit.fit(log_mstar, log_SFR, *args, **kwargs)
+
+    # return an array of distance to SFMS
+    D_SFMS = _np.ones(_np.size(log_mstar)) * -99 # init to flag
+
+    D_SFMS[ log_SFR > -99] = log_SFR[ log_SFR > -99] - _np.interp(log_mstar[ log_SFR > -99], m_fit, sfr_fit)
+
+
+    return D_SFMS, m_fit, sfr_fit
+    
+        
+        
+
+
+
+    
+    
+    
