@@ -1,35 +1,52 @@
 """
-Pre-load file paths and data
+   This file defines the filepaths and data structures for each of the 
+   data files, loads the data into a single dictionary with uniform 
+   keyword names across simulations for *most* parameters, and calculates
+   additional dataset information to either generalize existing information
+   (e.x. SFR's to sSFR's and vice-versa) or compute new properties (e.x. gas
+   fraction). 
+
+   Warning: This is is a very ugly script. I did a lot of hard coding for
+   specific data files in order to minimize time spent coding this up. 
+   Generalizing this to readily read in any file (provided one defined
+   column names for that file first) and auto-compute all releveant information
+   would be really nice. 
+
+   To Do: Re-write this to use a data class / functions... 
 """
-import numpy as _np
-
 import matplotlib as _mpl
-_mpl.use('Agg')
+_mpl.use('Agg', warn = False)      
 
+import numpy as _np
 from matplotlib import rc as _rc
 from astropy.io import fits
 
 from quenched_galaxies.function_definitions import fit_SFMS
 
 
+
+# define general plot styles:
 fsize = 17
 _rc('text', usetex=False)
 _rc('font', size=fsize)#, ftype=42)
 line_width = 3.5
 point_size = 30
 
+# set data paths
 _home = "/home/aemerick/code/quenched_galaxies/"
 _data_path = _home + "Data/"
 
+# set colors associated with datasets
+colors = {'Illustris' : 'C0', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5',
+          'catinella13' : 'C9', 'brown15' : 'black'}
 
-#eagle_ms="EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt"
-#eagle_
-
-colors = {'Illustris' : 'C0', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5'}
-
+#
+# Data file paths. If multiple for a single dataset, give as list. This is handled later to combine to single
+#                  dictionary
+#
 data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
                # 'Illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
-#              'Illustris'         :   "Illustris1_individual_galaxy_values_z0.csv",
+               # 'Illustris'         :   "Illustris1_individual_galaxy_values_z0.csv",
               'Illustris'         : ['Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv',
                                      'project3_Illustris1_individual_galaxy_values_all1e8Msunh_z0.csv'],
               #'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
@@ -41,6 +58,10 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
                                      'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt']}
 
+#
+#
+# Gross bit. Set dtype and format for every column in every data file
+#
 data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mcold'], 'formats' : ['f8','f8','f8']}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'r_half', 'log_Mstar', 'log_Mstar_1Rh', 'log_Mstar_2Rh'], 'formats':['f8']*6}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr'], 'formats' : ['f8','f8','f8','f8','f8']})],

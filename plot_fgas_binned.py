@@ -1,5 +1,8 @@
 from definitions import * # -- local - predefines
-from galaxy_analysis.plot.plot_styles import plot_histogram
+
+# -- need to port this to local file so no one needs to download this code:
+from galaxy_analysis.plot.plot_styles import plot_histogram 
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,20 +19,14 @@ ALL_DATA = ['Illustris','SCSAM','MUFASA','EAGLE','Brooks', 'Bradford2015']
 SIM_DATA = ['Illustris','SCSAM','MUFASA','EAGLE','Brooks']
 OBS_DATA = ['Bradford2015']
 
-SCATTER_THRESHOLD = 10 # threshold to plot scatter poitns instead of median curves
+point_size = 40        # default point size for the above
 
-point_size = 40
-
-#
-# - really just need to handle this as general, only making median 
-#   curves when number in bin is > 10 or something like that
-#
-scatter_only_dataset = {}
-for k in ALL_DATA:
-    scatter_only_dataset[k] = False
-scatter_only_dataset['Brooks'] = True
 
 def compute_fgas(mstar, mgas, log = True):
+    """
+    Compute gas fraction as gas_mass / baryon_mass
+    """
+
     if log:
         fgas = 10**(mgas) / (10**(mstar) + 10**(mgas))
     else:
@@ -37,23 +34,45 @@ def compute_fgas(mstar, mgas, log = True):
     return fgas
 
 def _check_bins(x,xbins):
+    """
+    Return number of points in each bin
+    """
     N = np.zeros(np.size(xbins) -1)
     for i in np.arange(np.size(xbins)-1):
         N[i] = np.size( x[ (x >= xbins[i]) * (x < xbins[i+1])])
     return N
 
-def _select_scatter_points(x, xbins):
+def _select_scatter_points(x, xbins, threshold = 10):
+    """
+    Provide cut-arrays that can be used to selectively plot points
+    that sit in bins with low counts. Also provides selection for
+    points that do sit in bins with enough counts to do statistics.
+    """
     N_per_bin = _check_bins(x, xbins)
 
     scatter_select = np.zeros(np.size(x))
     for i, N in enumerate(N_per_bin):
-        if N < SCATTER_THRESHOLD:
+        if N < threshold:
             scatter_select += ( x >= xbins[i] ) * ( x < xbins[i+1] )
     scatter_select = scatter_select.astype(bool)
 
     return scatter_select, scatter_select == 0
 
 def _compute_statistics(x, y, xbins, return_dict = False):
+    """
+    Function to compute statistics on 'y' in each 'xbin'. Original
+    version of this returns:
+
+         bin_centers, median, std, Q1, Q3, average, Num_points_per_bin
+
+    and removes bins that are empty. Does not have any catches for low
+    number statistics in bins (i.e. will compute these values even for 
+    N = 1). return_dict = False operates this way. However, return_dict = True
+    is new api functionality which returns a dictionary of all the above
+    (and more) which makes adding new stats easy in the future. At the moment
+    this includes the above and the percentiles for 10% and 90% (poorly named
+    'Q10' and 'Q90' respectively).
+    """
     flag = -99999999
     # generic function to compute median and statistics
     median = np.ones(np.size(xbins)-1) * flag # leave neg as flag
@@ -344,14 +363,6 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
 
                 y = data[k]['log_Mcold' + rhalf_str]
  
-            #if scatter_only_dataset[k]:
-            #    if observational_limits == 'Bradford':
-            #        cut = fgas_limits(x, data[k]['fgas'])
-            #        x   = x[cut]
-            #        y   = y[cut]    
-
-#                ax.scatter(x, y, color = colors[k], lw = 0, s = point_size, label = k, alpha = 1.0)
-            #else:
             # function assumes that y is logged
             _compute_and_plot(ax, x, y, data[k]['fgas'], mstar_bins, k, color = colors[k])
 
@@ -361,16 +372,29 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
             rhalf_label = r' '
 
         if include_range == 'std':
-            ylabel = r'log(Average M$_{\rm gas}$/M$_{\odot}$)' + rhalf_label
+            ylabel = r'log(Average M$_{\rm gas}$[M$_{\odot}$])' + rhalf_label
             ylabel += r'with STD'
         else:
-            ylabel = r'log(Median M$_{\rm gas}$/M$_{\odot}$)' + rhalf_label
+            ylabel = r'log(Median M$_{\rm gas}$ [M$_{\odot}$])' + rhalf_label
             ylabel += r'with IQR'
         ax.set_ylabel(ylabel)
 
 
+    # add aditional observational lines:
+    if not (observational_limits is None):
+
+        ax.plot(brown_15['log_Mstar'], brown_15['log_MHI'], color = colors['brown15'], lw = 3)
+        ax.scatter(brown_15['log_Mstar'], brown_15['log_MHI'], color = colors['brown15'], 
+                marker = 's', s = 3*point_size, label = 'Brown-15')
+
+        ax.plot(cantinella_13['log_Mstar'], cantinella_13['log_MHI'], color = colors['catinella13'], lw = 3)
+        ax.scatter(cantinella_13['log_Mstar'], cantinella_13['log_MHI'], color = colors['catinella13'], 
+                   marker = 'o', s = 3*point_size, label = 'Catinella-13')
+
+        ax.legend(loc = 'upper left', ncol=2)
+    else:
     # axis labels and legend
-    ax.legend(loc = 'best')
+        ax.legend(loc = 'best')
     ax.set_xlabel(r'log( M$_{\rm *}$ / M$_{\odot}$)')
     plt.minorticks_on()
     ax.set_ylim(7, 11.4)
@@ -393,15 +417,15 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
 
     if observational_limits == 'Bradford':
         outname += '_bradford_fgas_cut'
-        ax.set_title(r'With Observational f$_{\rm gas}$ Cut')
+        ax.set_title(r'With Bradford 2015 f$_{\rm gas}$ Cut')
     else:
         ax.set_title(r'Including M$_{\rm gas} = 0$')
 
     ax.plot(ax.get_xlim(), ax.get_ylim(), lw = 0.5*line_width, ls = '--', color = 'black')
-
+    plt.tight_layout()
 
     fig.savefig(_output_dir + outname + '.png')
-
+    plt.close()
     return
     
 
@@ -648,10 +672,10 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
             rhalf_label = r' '
 
         if include_range == 'std':
-            ylabel = r'log(Average M$_{\rm gas}$/M$_{\odot}$)' + rhalf_label
+            ylabel = r'log(Average M$_{\rm gas}$ [M$_{\odot}$])' + rhalf_label
             ylabel += r'with STD'
         else:
-            ylabel = r'log(Median M$_{\rm gas}$/M$_{\odot}$)' + rhalf_label
+            ylabel = r'log(Median M$_{\rm gas}$ [M$_{\odot}$])' + rhalf_label
             ylabel += r'with IQR'
         ax.set_ylabel(ylabel)
 
@@ -683,10 +707,10 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
     if log_fgas:
         outname += '_logged'
     
-
-
     ax.plot([0,0], ax.get_ylim(), lw = 0.5*line_width, ls = '--', color = 'black')
 #   shade in width of SFMS here
+
+    plt.tight_layout()
 
     fig.savefig(_output_dir + outname + '.png')
 
@@ -854,11 +878,33 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         ax.set_ylabel(ylabel)
         # end plot median and fill between
 
+
+    legend_col = 1
+    if not (observational_limits is None):
+
+        fgas = brown_15['fgas']
+        if log_fgas:
+            fgas = np.log10(fgas)
+
+        ax.plot(brown_15['log_Mstar'], fgas, color = colors['brown15'], lw = 3)
+        ax.scatter(brown_15['log_Mstar'], fgas, color = colors['brown15'], 
+                marker = 's', s = 3*point_size, label = 'Brown-15')
+
+        fgas = cantinella_13['fgas']
+        if log_fgas:
+             fgas = np.log10(fgas)
+
+        ax.plot(cantinella_13['log_Mstar'], fgas, color = colors['catinella13'], lw = 3)
+        ax.scatter(cantinella_13['log_Mstar'], fgas, color = colors['catinella13'], 
+                   marker = 'o', s = 3*point_size, label = 'Catinella-13')
+        legend_col = 2
+   
     # axis labels
     if log_fgas:
-        ax.legend(loc='lower left')
+        ax.legend(loc='lower left', ncol = legend_col)
     else:
-        ax.legend(loc='upper right')
+        ax.legend(loc='upper right', ncol = legend_col)
+
     ax.set_xlabel(r'log( M$_{\rm *}$ / M$_{\odot}$)')
     plt.minorticks_on()
     if log_fgas:
@@ -866,7 +912,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     else:
         ax.set_ylim(0,1.0)
     ax.set_xlim(7,12.75)
-    plt.tight_layout()
+
 
     # set output filename and save
     if method == 'scatter':
@@ -890,10 +936,11 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
 
     if observational_limits == 'Bradford':
         outname += '_bradford_fgas_cut'
-        ax.set_title(r'With Observational f$_{\rm gas}$ Cut')
+        ax.set_title(r'With Bradford 2015 f$_{\rm gas}$ Cut')
     else:
         ax.set_title(r'Including M$_{\rm gas} = 0$')
 
+    plt.tight_layout()
     fig.savefig(_output_dir + outname + '.png')
     plt.close()
     return
@@ -1068,6 +1115,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
     #else:
     #    ax.set_title(r'Including M$_{\rm gas} = 0$')
 
+    plt.tight_layout()
     fig.savefig(_output_dir + outname + extra_label + '.png')
     plt.close()
     return
@@ -1195,44 +1243,57 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
 if __name__ == "__main__":
 
+    #
+    # Plot various versions of the SFMS fit. Include 2D hist with gas fraction
+    #
     plot_SFMS(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
     plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
     plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], log_fgas = True)
 
+
+    #
+    # plot gas fraction as function of distance to SFMS
+    # 
     plot_fgas_DSFMS(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], remove_zeros = False)
     plot_fgas_DSFMS(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], log_fgas = True, remove_zeros=True)
 
-    #plot_gas_mass_stellar_mass(method = 'scatter')
+    #
+    # gas mass vs stellar mass
+    # 
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = SIM_DATA)
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 1)
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 2)
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford')
 
-    # plot_fgas_ssfr(method = 'scatter')
-    # plot_fgas_ssfr(method = 'binned', include_range = 'std')
+    #
+    # gas fraction vs sSFR and variations
+    #
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA)
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, remove_zeros = True)
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True, remove_zeros=True)
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True, remove_zeros=True, ssfr_bins = np.arange(-20.5,-8.9,0.2), extra_label = '_extended')
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True)
 
-    #plot_fgas_mstar(method = 'scatter')
-#    plot_fgas_mstar(method = 'binned', include_range = 'std')
+    #
+    # make all gas fraction vs stellar mass plots and variants
+    #
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = SIM_DATA)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford')
-#    plot_fgas_mstar(method = 'binned', include_range = 'std', log_fgas = True)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, observational_limits = 'Bradford')
-
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA, rhalf = 1)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 1)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA, rhalf = 2)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 2)
 
+    # do above as histograms
+    #
     plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA', 'Bradford2015'])
     plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA','Bradford2015'])
 
-
+    #
+    # gas fraction as a function of ssfr histograms
+    #
     plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA'], log_fgas = True)
     plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA'], log_fgas = False)
     plot_fgas_ssfr_histograms(sSFR_type = '10Myr', sSFR_alternate = '20Myr', datasets =['Illustris', 'SCSAM', 'EAGLE','MUFASA'])
