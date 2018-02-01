@@ -3,6 +3,9 @@ from galaxy_analysis.plot.plot_styles import plot_histogram
 
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from scipy.stats import binned_statistic_2d
 
 from function_definitions import fgas_limits
 
@@ -50,12 +53,13 @@ def _select_scatter_points(x, xbins):
 
     return scatter_select, scatter_select == 0
 
-def _compute_statistics(x, y, xbins):
+def _compute_statistics(x, y, xbins, return_dict = False):
     flag = -99999999
     # generic function to compute median and statistics
     median = np.ones(np.size(xbins)-1) * flag # leave neg as flag
     average = np.zeros(np.size(median))
     Q1 = np.zeros(np.size(median)); Q3 = np.zeros(np.size(median))
+    Q10 = np.zeros(np.size(median)); Q90 = np.zeros(np.size(median))
     std = np.zeros(np.size(median)); N = np.zeros(np.size(median))
     for i in np.arange(np.size(xbins)-1):
         y_select  = y[(x>=xbins[i])*(x<xbins[i+1])] 
@@ -63,15 +67,148 @@ def _compute_statistics(x, y, xbins):
         if np.size(y_select) >= 1:
             median[i] = np.median( y_select )
             average[i] = np.average( y_select)
+            Q10[i]    = np.percentile( y_select, 10)
             Q1[i]     = np.percentile( y_select, 25)
             Q3[i]     = np.percentile( y_select, 75)
+            Q90[i]    = np.percentile( y_select, 90)
             std[i]    = np.std(y_select)
             N[i]      = np.size( y_select )
 
     select = median > flag
     centers = (xbins[1:] + xbins[:-1])*0.5
-    return centers[select], median[select], std[select], Q1[select], Q3[select], average[select], N[select]
 
+    if return_dict:
+
+        rdict = {'x' : centers[select], 'median' : median[select], 'std' : std[select],
+                 'Q1' : Q1[select], 'Q3' : Q3[select], 'average' : average[select], 'N' : N[select],
+                 'Q10' : Q10[select], 'Q90' : Q90[select] }
+        return rdict
+
+    else:
+        return centers[select], median[select], std[select], Q1[select], Q3[select], average[select], N[select]
+
+
+def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = '1Gyr',
+              datasets = SIM_DATA):
+    """
+    Plot the SFMS fits for each simulation individually as panels. For simplicity,
+    will just be plotting median and IQR for now, but should move to doing 
+    contours / points.
+    """
+
+    fig, ax = plt.subplots(2,2) # hard coded for now - not good
+    fig.set_size_inches(12,12)
+
+    for axi, k in zip( [(0,0),(0,1),(1,0),(1,1)], datasets):
+        
+        SFR   = data[k]['log_SFR_' + SFR_type]
+        Mstar = data[k]['log_Mstar']
+
+        # filter
+        select = SFR > -99
+        SFR    = SFR[select]
+        Mstar  = Mstar[select]
+
+        scatter_select, line_select = _select_scatter_points(Mstar, mstar_bins)
+        ax[axi].scatter(Mstar[scatter_select], SFR[scatter_select], s = point_size, color = colors[k])
+        computed_stats = _compute_statistics(Mstar[line_select], SFR[line_select], mstar_bins, return_dict = True)
+
+        ax[axi].plot(computed_stats['x'], computed_stats['median'], lw = line_width, color = colors[k], ls = '-', label = k)
+
+        ax[axi].fill_between(computed_stats['x'], computed_stats['Q1'], computed_stats['Q3'], facecolor = colors[k],
+                             interpolate = True, lw = line_width, alpha = 0.4)
+        ax[axi].fill_between(computed_stats['x'], computed_stats['Q10'], computed_stats['Q90'], facecolor = colors[k],
+                             interpolate = True, lw = line_width, alpha = 0.1)
+
+        ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
+                     lw = line_width, ls = '--', color = 'black')
+
+        ax[axi].set_xlim(np.min(mstar_bins), np.max(mstar_bins))
+        ax[axi].set_ylim(-4, 2)
+        ax[axi].legend(loc='upper left')
+
+        ax[axi].set_xlabel(r'log( M$_{*}$ [M$_{\odot}$])')
+        ax[axi].set_ylabel(r'log( SFR (M$_{\odot}$ yr$^{-1}$)')
+
+    plt.tight_layout()
+    plt.minorticks_on()
+    fig.savefig('SFMS_fits.png')
+    
+    return
+
+def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange(-4, 2, 0.1),
+                      remove_zero = True, SFR_type = '1Gyr', log_fgas = False,
+                      datasets = SIM_DATA):
+    """
+    Plot the SFMS fits for each simulation individually as panels. For simplicity,
+    will just be plotting median and IQR for now, but should move to doing 
+    contours / points.
+    """
+
+    fig, ax = plt.subplots(2,2) # hard coded for now - not good
+    fig.set_size_inches(16,16)
+
+    for axi, k in zip( [(0,0),(0,1),(1,0),(1,1)], datasets):
+        
+        SFR   = data[k]['log_SFR_' + SFR_type]
+        Mstar = data[k]['log_Mstar']
+        fgas  = data[k]['fgas']
+
+        # filter
+        select = SFR > -99
+        SFR    = SFR[select]
+        Mstar  = Mstar[select]
+
+        if log_fgas:
+            fgas   = np.log10(fgas[select])
+            vmin   = -2.5
+            vmax   = 0
+            cmap   = 'plasma'
+        else:
+            fgas   = fgas[select]
+            vmin = 0
+            vmax = 1
+            cmap = 'viridis'
+
+        median, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, SFR, fgas, statistic = 'median', bins = (mstar_bins, sfr_bins))
+        xmesh, ymesh = np.meshgrid(x_edge, y_edge)
+
+        img1 = ax[axi].pcolormesh(xmesh, ymesh, median.T, 
+                                  cmap = cmap, vmin = vmin, vmax = vmax)
+        divider = make_axes_locatable(ax[axi])
+        cax1 = divider.append_axes('right', size = '5%', pad = 0.05)
+        if log_fgas:
+            cbar_label = r'log(f$_{\rm gas}$)'
+        else:
+            cbar_label = r'f$_{\rm gas}$'
+
+        fig.colorbar(img1, cax=cax1, label = cbar_label)
+
+        #c = plt.colorbar(p1, ax = ax[axi], pad = 0.0015, aspect=10)
+
+        ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
+                     lw = line_width, ls = '--', color = 'black')
+
+        ax[axi].set_xlim(7.8, 12.5)
+        ax[axi].set_ylim(-3.5, 2)
+#        ax[axi].legend(loc='upper left')
+        ax[axi].text(8.2, 1.5, k)
+
+        ax[axi].set_xlabel(r'log( M$_{*}$ [M$_{\odot}$])')
+        ax[axi].set_ylabel(r'log( SFR (M$_{\odot}$ yr$^{-1}$)')
+        plt.minorticks_on()
+
+    plt.tight_layout(h_pad = 1)
+    plt.minorticks_on()
+
+    outname = 'SFMS_fits_2dhist'
+
+    if log_fgas:
+        outname += '_log_fgas'
+
+    fig.savefig(outname + '.png')
+    
+    return
 
 
 def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
@@ -1057,6 +1194,10 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
 
 if __name__ == "__main__":
+
+    plot_SFMS(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
+    plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
+    plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], log_fgas = True)
 
     plot_fgas_DSFMS(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], remove_zeros = False)
     plot_fgas_DSFMS(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], log_fgas = True, remove_zeros=True)

@@ -47,7 +47,7 @@ def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
         kwargs['Nbin_thresh'] = 20
 
     if not 'dlogm' in kwargs.keys():
-        kwargs['dlogm'] = 0.01
+        kwargs['dlogm'] = 0.1
 
     m_fit, sfr_fit = fit.fit(log_mstar, log_SFR, *args, **kwargs)
 
