@@ -42,6 +42,7 @@ def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
 
     if not 'method' in kwargs.keys():
         kwargs['method'] = 'negbinomfit'
+        kwargs['method'] = 'gaussmix'
 
     if not 'Nbin_thresh' in kwargs.keys():
         kwargs['Nbin_thresh'] = 20

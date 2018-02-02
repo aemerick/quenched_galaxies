@@ -37,8 +37,8 @@ _home = "/home/aemerick/code/quenched_galaxies/"
 _data_path = _home + "Data/"
 
 # set colors associated with datasets
-colors = {'Illustris' : 'C0', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C4', 'Bradford2015' : 'C5',
-          'catinella13' : 'C9', 'brown15' : 'black'}
+colors = {'Illustris' : 'C9', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C0', 'Bradford2015' : 'C5',
+          'catinella13' : 'C4', 'brown15' : 'black'}
 
 #
 # Data file paths. If multiple for a single dataset, give as list. This is handled later to combine to single
@@ -56,7 +56,8 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
               'MUFASA'            : "MUFASA_GALAXY.txt",
               'EAGLE'             : ['EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt', 
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
-                                     'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt']}
+                                     'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt'],
+              'NSA_catalog'       : 'dickey_NSA_iso_lowmass_gals.txt'}
 
 #
 #
@@ -72,7 +73,8 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 
 
                'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']}),
                'Brooks'    : [ _np.dtype( {'names' : ['Sim','Grp','Mstar','Mvir','SFR_10Myr','SFR_1Gyr','time_last_SF','MHI', 'X','Y','Z','VX','VY','VZ','parent'], 'formats' : ['U5','U3'] + ['f8']*12 + ['u1']}),
-                               _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})]
+                               _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})],
+               'NSA_catalog' : _np.dtype({'names' : ['NSAID', 'log_Mstar', 'DHOST', 'D4000', 'HAEW', 'HALPHA_SFR', 'HALPHA_SSFR'] , 'formats' : ['int'] + ['f8']*6})
               }
 
 delimiters = {} # assign delimiters and exceptions
@@ -125,7 +127,7 @@ _data['Brooks'][0] = _data['Brooks'][0][ select ]
 
 
 # load scdata
-scdata = _np.genfromtxt('./Data/newSCSAMgalprop.dat', names = True, skip_header = 46)
+scdata = _np.genfromtxt(_data_path + data_files['SCSAM'] , names = True, skip_header = 46)
 scdata = scdata[scdata['sat_type'] == 0]
 scdata = scdata[scdata['mstar'] > 0]
 _data['SCSAM'] = scdata
@@ -202,11 +204,28 @@ _Bradford_2015 = fits.open(_data_path + 'table_1_bradford_2015.fits')
 data['Bradford2015'] = {}
 Bradford_keys = {'R_eff' : 'R_EFF', 'R_eff_err' : 'R_eff_err',
                  'MHI'   : 'M_HI' , 'Mstar'     : 'M_STAR',
-                 'Mstar_err' : 'M_STAR_ERR'}
-for k in ['R_eff', 'R_eff_err', 'MHI', 'Mstar', 'Mstar_err']:
+                 'Mstar_err' : 'M_STAR_ERR', 'NSAID' : 'NSAID'}
+
+for k in ['R_eff', 'R_eff_err', 'MHI', 'Mstar', 'Mstar_err', 'NSAID']:
     data['Bradford2015'][k] =  _Bradford_2015[1].data[Bradford_keys[k]]
 data['Bradford2015']['log_Mstar'] = _np.log10(data['Bradford2015']['Mstar'])
 data['Bradford2015']['log_MHI']   = _np.log10(data['Bradford2015']['MHI'])
+
+data['Bradford2015']['log_SFR_Halpha'] = _np.ones(_np.size( data['Bradford2015']['Mstar'])) * -99
+data['Bradford2015']['log_sSFR_Halpha'] = _np.ones(_np.size( data['Bradford2015']['Mstar'])) * -99
+for select, i in enumerate(data['Bradford2015']['NSAID']):
+    if (i in data['NSA_catalog']['NSAID']):
+        select2 = _np.where(data['NSA_catalog']['NSAID'] == i)[0]
+
+#        print select, select2, i, data['Bradford2015']['NSAID'][select], data['NSA_catalog']['NSAID'][select2]
+
+        data['Bradford2015']['log_SFR_Halpha'][select]  = data['NSA_catalog']['HALPHA_SFR'][select2]
+        data['Bradford2015']['log_sSFR_Halpha'][select] = data['NSA_catalog']['HALPHA_SSFR'][select2]
+
+data['Bradford2015']['SFR_Halpha']  = 10.0**(data['Bradford2015']['log_SFR_Halpha'])
+data['Bradford2015']['sSFR_Halpha'] = 10.0**(data['Bradford2015']['log_sSFR_Halpha'])
+
+print "BRADFORD: ", _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] < -90]), _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] > -90])
 
 #
 # Pre-compute some things for each data set
@@ -296,6 +315,9 @@ HI_APPROXIMATION = True
 if HI_APPROXIMATION: # compute M_HI from M_cold
     print "CAUTION: HI Approximation on - cold gas mass converted to HI with constant factor of ", f_HI
     for k in data.keys():
+        if k == 'NSA_catalog':
+            continue
+
         if not 'log_MHI' in data[k].keys():
             data[k]['log_MHI'] = data[k]['log_Mcold'] + _np.log10(f_HI)
 

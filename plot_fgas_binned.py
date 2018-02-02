@@ -188,6 +188,8 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
             vmin = 0
             vmax = 1
             cmap = 'viridis'
+            cmap = "RdYlBu_r"
+            cmap = "PRGn"
 
         median, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, SFR, fgas, statistic = 'median', bins = (mstar_bins, sfr_bins))
         xmesh, ymesh = np.meshgrid(x_edge, y_edge)
@@ -313,7 +315,7 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
 
             # check number of points in bins - plot low number counts as scatter
             scatter_select, line_select = _select_scatter_points(xdata, xbins)
-            ax.scatter(xdata[scatter_select], np.log10(ydata[scatter_select]), s = point_size, **kwargs)
+            axis.scatter(xdata[scatter_select], np.log10(ydata[scatter_select]), s = point_size, **kwargs)
             x,median,std,Q1,Q3,average, N = _compute_statistics(xdata[line_select] , ydata[line_select], xbins)
 
             # scatter plot points that don't have proper statistics
@@ -324,13 +326,13 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
                 fill_up = median + std
                 fill_low = median - std
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, np.log10(average), lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, np.log10(average), lw = line_width, label = label, *args, **kwargs)
                 #print label, x, average
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, np.log10(median), lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, np.log10(median), lw = line_width, label = label, *args, **kwargs)
                 #print label, x, median
 
             if not (fill_low is None):
@@ -404,7 +406,10 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
     elif method == 'binned':
         outname = 'MHI_Mstar_binned'
 
+
     outname += rhalf_str
+    if not (rhalf is None):
+        outname = rhalf_str.strip('_') + '/' + outname
 
     if include_range == 'IQR':
         outname += '_IQR'
@@ -429,8 +434,8 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
     return
     
 
-def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
-                         fgas_bins = np.arange(0,1.05,0.025) , norm = 'fraction',
+def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11]),
+                         fgas_bins = np.arange(0,1.1,0.05) , norm = 'fraction',
                          log_fgas = False, datasets = ALL_DATA):
     """
     Constructs a panel plot of histograms showing f_gas distributions, with panels
@@ -448,7 +453,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11, 12]),
                      True.
     """
 
-    _coldict = {5 : (2,3)}
+    _coldict = {4 : (2,3), 5 : (2,3)}
     nrow, ncol = _coldict[np.size(mass_bins)]
 
     fig, ax = plt.subplots(nrow,ncol)
@@ -609,7 +614,7 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
 
             # check number of points in bins - plot low number counts as scatter
             scatter_select, line_select = _select_scatter_points(xdata, xbins)
-            ax.scatter(xdata[scatter_select], yscatter[scatter_select], s = point_size, **kwargs)
+            axis.scatter(xdata[scatter_select], yscatter[scatter_select], s = point_size, **kwargs)
             x,median,std,Q1,Q3,average, N = _compute_statistics(xdata[line_select] , ydata[line_select], xbins)
 
             # scatter plot points that don't have proper statistics
@@ -619,7 +624,7 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
                 fill_up = median + std
                 fill_low = median - std
                 fill_low[fill_low < 0] = 0
-                ax.plot(x, np.log10(average), lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, np.log10(average), lw = line_width, label = label, *args, **kwargs)
                 #print label, x, average
             elif include_range == 'IQR':
 
@@ -634,7 +639,7 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
                 else:
                     fill_low[fill_low < 0] = 0
 
-                ax.plot(x, median, lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, median, lw = line_width, label = label, *args, **kwargs)
 
             if not (fill_low is None):
                 if 'color' in kwargs.keys():
@@ -675,7 +680,10 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
             ylabel = r'log(Average M$_{\rm gas}$ [M$_{\odot}$])' + rhalf_label
             ylabel += r'with STD'
         else:
-            ylabel = r'log(Median M$_{\rm gas}$ [M$_{\odot}$])' + rhalf_label
+            if log_fgas:
+                ylabel = r'log(Median f$_{\rm gas}$)' + rhalf_label
+            else:
+                ylabel = r'Median f$_{\rm gas}$' + rhalf_label
             ylabel += r'with IQR'
         ax.set_ylabel(ylabel)
 
@@ -698,6 +706,8 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
         outname = 'fgas_DSFMS_binned'
 
     outname += rhalf_str
+    if not (rhalf is None):
+        outname = rhalf_str.strip('_') + '/' + outname
 
     if include_range == 'IQR':
         outname += '_IQR'
@@ -717,7 +727,204 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
     plt.close()
     return
     
+def plot_fgas_DSFMS_panel(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.arange(-5,3,0.2),
+                          mass_bins = [8,9,10,11],
+                          log_fgas = False,    rhalf = None, remove_zero = False,
+                          datasets = ALL_DATA, SFR_type = '1Gyr', single_SFMS = False,
+                          recalculate_SFMS = False, *args, **kwargs):
+    """
+    Plot gas fraction as a function of the distance to the star forming main sequence
+    of galaxies. This is difficult to do in reality, as it requires first defining the SFMS
+    which may or may not be uniform across simulations.
+
+    single_sfms : boolean, optional
+        If True, use the distance to SFMS provided for all data
+
+    """
+
+    if recalculate_SFMS:
+        print "This will recalculate the pre-computed SFMS and distances to each, "
+        print "but is not yet implemented. When it is, args and kwargs will be passed "
+        print "to the fitting routine."
+        raise NotImplementedError
+#
+#
+#
+
+    if log_fgas:
+        remove_zero = True
+    if method == 'binned' and include_range is None:
+        include_range = 'IQR'
+
+    if not (rhalf is None):
+        rhalf_str = '_%iRh'%(rhalf)
+    else:
+        rhalf_str = ''
+
+    _coldict = {4 : (2,3), 5 : (2,3)}
+    nrow, ncol = _coldict[np.size(mass_bins)]
+
+    fig, ax = plt.subplots(nrow,ncol)
     
+    # now loop through and plot data
+    _mass_bins = np.zeros(np.size(mass_bins)+1)
+    _mass_bins[:-1] = mass_bins
+    _mass_bins[-1] = np.inf
+    mass_bins = 1.0 * _mass_bins
+    axi,axj = 0,0
+
+    fig, ax = plt.subplots(nrow,ncol)
+    fig.set_size_inches(5*ncol,5*nrow)
+
+    if method == 'binned':
+        def _compute_and_plot(axis, xdata, ydata, fgas, xbins, label, *args, **kwargs):
+
+            # assume ydata is logged - compute stats on un-logged data
+            # ydata = 10.0**(ydata)
+            if remove_zero:
+                xdata = xdata[ydata > 1.0E-8] # ONLY those with gas
+                ydata = ydata[ydata > 1.0E-8]
+
+            #if observational_limits == 'Bradford':
+            #    cut = fgas_limits(xdata, fgas)
+            #    xdata   = xdata[cut]
+            #    ydata   = ydata[cut]
+
+            if log_fgas:
+                yscatter = np.log10(ydata)
+            else:
+                yscatter = ydata
+
+            # check number of points in bins - plot low number counts as scatter
+            scatter_select, line_select = _select_scatter_points(xdata, xbins)
+            axis.scatter(xdata[scatter_select], yscatter[scatter_select], s = point_size, **kwargs)
+            x,median,std,Q1,Q3,average, N = _compute_statistics(xdata[line_select] , ydata[line_select], xbins)
+
+            # scatter plot points that don't have proper statistics
+            
+            fill_low = None ; fill_up = None
+            if include_range == 'std':
+                fill_up = median + std
+                fill_low = median - std
+                fill_low[fill_low < 0] = 0
+                axis.plot(x, np.log10(average), lw = line_width, label = label, *args, **kwargs)
+                #print label, x, average
+            elif include_range == 'IQR':
+
+                fill_up = Q3
+                fill_low = Q1
+
+                if log_fgas: # and False:
+                    fill_low[fill_low <= 0] = 1.0E-8
+                    fill_up = np.log10(fill_up)
+                    fill_low = np.log10(fill_low)
+                    median   = np.log10(median)
+                else:
+                    fill_low[fill_low < 0] = 0
+
+                axis.plot(x, median, lw = line_width, label = label, *args, **kwargs)
+
+            if not (fill_low is None):
+                if 'color' in kwargs.keys():
+                    facecolor = kwargs['color']
+                else:
+                    facecolor = 'black'
+
+                axis.fill_between(x, fill_low, fill_up, facecolor = facecolor,
+                                interpolate = True, lw = line_width, alpha = 0.25, *args, **kwargs)
+
+            return
+
+        # plot each data set
+        for k in datasets:
+
+            if not (rhalf is None):
+
+                if ( not data[k].has_key('log_Mstar' + rhalf_str)):
+                    print 'missing Rhalf info for ', k, ' continuing'
+                    continue
+
+            x = data[k]['D_SFMS_' + SFR_type]                # distance is in dex
+            mstar = data[k]['log_Mstar']
+            if 'fgas' + rhalf_str in data[k].keys():
+                y = data[k]['fgas' + rhalf_str]
+
+            # remove those with distance_SFMS < -999
+            select = x > -99                        # hard coded flag
+
+            axi, axj = 0, 0
+            for i in np.arange(np.size(mass_bins)-1):
+                x_select = x[ select * (mstar >= mass_bins[i]) * (mstar < mass_bins[i+1])]
+                y_select = y[ select * (mstar >= mass_bins[i]) * (mstar < mass_bins[i+1])]
+         
+                _compute_and_plot(ax[(axi,axj)], x_select, y_select, y_select, DSFMS_bins, k, color = colors[k])
+                ax[(axi,axj)].set_title(r'%.1f < log(M$_{*}$) < %.1f'%(mass_bins[i], mass_bins[i+1]))
+                # iterate axi axj
+                axj = axj + 1
+                if axj >= ncol:
+                    axj = 0
+                    axi = axi + 1
+   
+            # plot all data    
+            _compute_and_plot(ax[(axi,axj)], x[select], y[select],y[select], DSFMS_bins, k, color = colors[k])
+            ax[(axi,axj)].set_title('All Galaxies')
+
+        if not (rhalf is None):
+            rhalf_label = r' Interior to %i R$_{*,\rm{half}}$ '%(rhalf)
+        else:
+            rhalf_label = r' '
+
+        if include_range == 'std':
+            ylabel = r'log(Average M$_{\rm gas}$ [M$_{\odot}$])' + rhalf_label
+            ylabel += r'with STD'
+        else:
+            if log_fgas:
+                ylabel = r'log(Median f$_{\rm gas}$)' + rhalf_label
+            else:
+                ylabel = r'Median f$_{\rm gas}$' + rhalf_label
+            ylabel += r'with IQR'
+
+
+
+    # axis labels and legend
+    ax[(0,2)].legend(loc = 'best')
+
+    plt.minorticks_on()
+
+    for axind in [(0,0),(0,1),(0,2),(1,0),(1,1),(1,2)]:
+        ax[axind].set_xlabel(r'Distance to SFMS (dex)')
+        if log_fgas:
+            ax[axind].set_ylim(-4, 0)
+        else:
+            ax[axind].set_ylim(0.0, 1.0)
+
+        ax[axind].set_xlim(np.min(DSFMS_bins), np.max(DSFMS_bins))
+        ax[axind].plot([0,0], ax[axind].get_ylim(), lw = 0.5*line_width, ls = '--', color = 'black')
+        ax[axind].set_ylabel(ylabel)
+
+#    if method == 'scatter':
+#        outname = 'MHI_Mstar_scatter'
+    if method == 'binned':
+        outname = 'fgas_DSFMS_panel_plot'
+
+    outname += rhalf_str
+    if not (rhalf is None):
+        outname = rhalf_str.strip('_') + '/' + outname
+
+    if include_range == 'IQR':
+        outname += '_IQR'
+    elif include_range == 'std':
+        outname += '_std'
+
+    if log_fgas:
+        outname += '_logged'
+   
+    plt.tight_layout()
+
+    fig.savefig(_output_dir + outname + '.png')
+
+    plt.close()
+    return
 
 def plot_fgas_mstar(method = 'scatter', include_range = None,
                     mstar_bins = MSTAR_BINS, log_fgas = False, rhalf = None,
@@ -792,7 +999,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
             else:
                 yscatter = ydata[scatter_select]
 
-            ax.scatter(xdata[scatter_select], yscatter, s = point_size, **kwargs)
+            axis.scatter(xdata[scatter_select], yscatter, s = point_size, **kwargs)
 
             x,median,std,Q1,Q3,average, N = _compute_statistics(xdata[line_select] , ydata[line_select], xbins)
 
@@ -809,7 +1016,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                     fill_low = np.log10(fill_low)
                     average  = np.log10(average)
 
-                ax.plot(x, average, lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, average, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, average
             elif include_range == 'IQR':
                 fill_up = Q3
@@ -826,7 +1033,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                     fill_low = np.log10(fill_low)
                     median   = np.log10(median)
 
-                ax.plot(x, median, lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, median, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, median
 
             if not (fill_low is None):
@@ -921,6 +1128,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         outname = 'fgas_mstar_binned'
 
     outname += rhalf_str
+    if not (rhalf is None):
+        outname = rhalf_str.strip('_') + '/' + outname
 
     if include_range == 'std':
         outname = outname + '_std'
@@ -948,7 +1157,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
 def plot_fgas_ssfr(method = 'scatter', include_range = None,
                    ssfr_bins = np.arange(-15,-8.9,0.2),
                    ssfr_type = '1Gyr', plot_zeros = False, remove_zeros = False, log_fgas = False,
-                   datasets = ALL_DATA, rhalf = None, observational_limits = None, extra_label = '' ):
+                   datasets = ALL_DATA, rhalf = None, observational_limits = None, extra_label = '',
+                   add_observations = False):
     """
     Plot fgas as function of sSFR 
 
@@ -999,7 +1209,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
             else:
                 yscatter = ydata[scatter_select]
 
-            ax.scatter(xdata[scatter_select], yscatter, s = point_size, **kwargs)
+            axis.scatter(xdata[scatter_select], yscatter, s = point_size, **kwargs)
 
             x,median,std,Q1,Q3,average, N = _compute_statistics(xdata[line_select] , ydata[line_select], xbins)
 
@@ -1015,7 +1225,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
                     fill_low = np.log10(fill_low)
                     average  = np.log10(average)
 
-                ax.plot(x, average, lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, average, lw = line_width, label = label, *args, **kwargs)
             elif include_range == 'IQR':
                 fill_up = Q3
                 fill_low = Q1
@@ -1026,7 +1236,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
                     fill_low = np.log10(fill_low)
                     median   = np.log10(median)
 
-                ax.plot(x, median, lw = line_width, label = label, *args, **kwargs)
+                axis.plot(x, median, lw = line_width, label = label, *args, **kwargs)
 
             if not (fill_low is None):
                 axis.fill_between(x, fill_low, fill_up, facecolor = colors[label],
@@ -1044,9 +1254,9 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
 
                 yerr = np.array([[ ye2, ye1]]).T
 
-                ax.scatter(np.min(ssfr_bins) - 0.5, median, s = point_size*2, *args, **kwargs)
+                axis.scatter(np.min(ssfr_bins) - 0.5, median, s = point_size*2, *args, **kwargs)
 
-                ax.errorbar(np.min(ssfr_bins) - 0.5, median, yerr = yerr, markersize = point_size*4,
+                axis.errorbar(np.min(ssfr_bins) - 0.5, median, yerr = yerr, markersize = point_size*4,
                             color = colors[label], elinewidth = 0.75 * line_width, capsize = 4)
                  
             return
@@ -1063,6 +1273,13 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
                 log_Mgas = data[k]['log_Mcold']
 
             _compute_and_plot(ax, x, y, log_Mgas, ssfr_bins, k, color = colors[k])
+
+        if add_observations:
+            x = data['Bradford2015']['sSFR_Halpha']
+            y = data['Bradford2015']['fgas']
+            log_Mgas = data['Bradford2015']['log_MHI']
+
+            _compute_and_plot(ax, x, y, log_Mgas, ssfr_bins, 'Bradford2015', color = colors['Bradford2015'])
 
         if include_range == 'std':
             ylabel = r'Average f$_{\rm gas}$'
@@ -1094,6 +1311,8 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
     elif method == 'binned':
         outname = 'fgas_ssfr_' + ssfr_type + '_binned'
     outname += '_' + rhalf_str
+    if not (rhalf is None):
+        outname = rhalf_str.strip('_') + '/' + outname
 
     if include_range == 'IQR':
         outname += 'IQR'
@@ -1114,6 +1333,9 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
         ax.set_title(r'With Observational f$_{\rm gas}$ Cut')
     #else:
     #    ax.set_title(r'Including M$_{\rm gas} = 0$')
+
+    if add_observations:
+        outname += '_obs'
 
     plt.tight_layout()
     fig.savefig(_output_dir + outname + extra_label + '.png')
@@ -1144,9 +1366,9 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
     if fgas_bins is None:
         if log_fgas:
-            fgas_bins = np.arange(-4, 0.1, 0.1)
+            fgas_bins = np.arange(-4, 0.1, 0.2)
         else:
-            fgas_bins = np.arange(0, 1.05, 0.05)
+            fgas_bins = np.arange(0, 1.10, 0.1)
 
     nrow, ncol = _coldict[np.size(ssfr_bins)]
 
@@ -1160,7 +1382,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
     ssfr_bins = 1.0 * _ssfr_bins
     axi,axj = 0,0
 
-    def _compute_and_plot(fgas, ssfr, label, ibin, *args, **kwargs):
+    def _compute_and_plot(axis, fgas, ssfr, label, ibin, *args, **kwargs):
 
         if log_fgas:
             ssfr = ssfr[fgas > 0]
@@ -1174,12 +1396,13 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
         else:
             select    = ssfr == 0.0
             fgas_data = fgas[select]
-            print label, np.size(fgas_data)
+            if not log_fgas:
+                print 'NO SF in last ', sSFR_type, label, np.size(fgas_data), np.size(fgas_data[fgas_data < 0.1]), np.size(fgas_data)/(1.0*np.size(fgas)), np.median(fgas_data), np.max(fgas_data)
 
         hist, bins  = np.histogram( fgas_data, bins = fgas_bins)
         if norm == 'fraction':
-            A = 1.0 / np.max([1.0, np.sum(hist)])
-        plot_histogram(ax[axind], bins, hist * A, label = label, lw = line_width, *args, **kwargs)
+            A = 1.0 / np.max([1.0, 1.0*np.sum(hist)])
+        plot_histogram(axis, bins, hist * A, label = label, lw = line_width, *args, **kwargs)
 
         return 
 
@@ -1194,7 +1417,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
             x = data[k]['fgas']
 
-            _compute_and_plot(x, y, k, ibin, color = colors[k])
+            _compute_and_plot(ax[axind], x, y, k, ibin, color = colors[k])
 
         # set appropriate axis labels and plot styles
         if ibin == 1:
@@ -1241,8 +1464,137 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
     return
 
 
+def plot_sfr_mgas(method = 'binned', include_range = 'IQR',
+                  mgas_bins = np.arange(3,12,0.2),
+                  sfr_type = '1Gyr', plot_zeros = False, remove_zeros = False, log_fgas = False,
+                  datasets = ALL_DATA, rhalf = None, observational_limits = None, extra_label = '' ):
+    """
+    Plot SFR vs Mgas
+    """
+
+    if (include_range is None) and method == 'binned':
+        include_range = 'IQR'
+
+    if not (rhalf is None):
+        rhalf_str = '%iRh'%(rhalf)
+    else:
+        rhalf_str = ''
+
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8,8)
+
+    if method == 'binned':
+
+        def _compute_and_plot(axis, xdata, ydata, log_Mgas, xbins, label, *args, **kwargs):
+
+            selection = ydata > -99
+
+            xdata = xdata[selection]
+            ydata = ydata[selection]
+
+            scatter_select, line_select = _select_scatter_points(xdata, xbins)
+
+            axis.scatter(xdata[scatter_select], ydata[scatter_select], s = point_size, **kwargs)
+            x,median,std,Q1,Q3,average, N = _compute_statistics(xdata[line_select] , 10.0**(ydata[line_select]), xbins)
+
+            fill_low = None ; fill_up = None
+            if include_range == 'std':
+                fill_up = median + std
+                fill_low = median - std
+                fill_low[fill_low < 0] = 0
+
+                axis.plot(x, average, lw = line_width, label = label, *args, **kwargs)
+            elif include_range == 'IQR':
+                fill_up = Q3
+                fill_low = Q1
+                fill_low[fill_low < 0] = 0
+
+                axis.plot(x, np.log10(median), lw = line_width, label = label, *args, **kwargs)
+
+            if not (fill_low is None):
+                axis.fill_between(x, np.log10(fill_low), np.log10(fill_up), facecolor = colors[label],
+                                interpolate = True, lw = line_width, alpha = 0.25)
+
+                 
+            return
+
+        # plot each data source
+        for k in datasets:
+            #print k
+            if 'log_MHI' in data[k].keys():
+                x = data[k]['log_MHI']
+            else:
+                x = data[k]['log_Mcold']
+
+            try:
+                y = data[k]['log_SFR_' + sfr_type]
+            except:
+                print k, 'log_SFR_' + sfr_type
+                y = data[k]['log_SFR_' + sfr_type]
+
+            mstar = data[k]['log_Mstar']
+
+            x = x[mstar < 9.5]
+            y = y[mstar < 9.5]
+
+            _compute_and_plot(ax, x, y, x, mgas_bins, k, color = colors[k])
+
+        if include_range == 'std':
+            ylabel = r'Average f$_{\rm gas}$'
+            ylabel += r' with STD'
+        else:
+            ylabel = r'log(Median SFR [M$_{\odot}$ yr$^{-1}$])'
+            ylabel += r' with IQR'
+        ax.set_ylabel(ylabel)
+        # end plot median and fill between
+
+    # axis labels
+    ax.legend(loc='best')
+    ax.set_xlabel(r'log(M$_{\rm gas}$ [M$_{\odot}$])')
+    plt.minorticks_on()
+
+    if log_fgas:
+        ax.set_ylim(4, 12)
+    else:
+        ax.set_ylim(-6, 2)
+
+
+    # set output filename and save
+
+    if method == 'binned':
+        outname = 'sfr_mgas_' + sfr_type + '_binned'
+    
+    outname += '_' + rhalf_str
+
+    if not (rhalf is None):
+        outname = rhalf_str.strip('_') + '/' + outname
+
+    if include_range == 'IQR':
+        outname += 'IQR'
+    elif include_range == 'std':
+        outname += 'std'
+
+
+    # ax.set_title(r"M$_{\rm gas} > 0$ and sSFR > 0")
+    # else:
+    #    ax.set_title(r"Including Galaxies with M$_{\rm gas} = 0$")
+
+#    if observational_limits == 'Bradford':
+#        outname += '_bradford_fgas_cut'
+#        ax.set_title(r'With Observational f$_{\rm gas}$ Cut')
+    #else:
+    #    ax.set_title(r'Including M$_{\rm gas} = 0$')
+
+    plt.tight_layout()
+    fig.savefig(_output_dir + outname + extra_label + '.png')
+    plt.close()
+    return
+
+
 if __name__ == "__main__":
 
+
+    plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE','MUFASA','Brooks'])
     #
     # Plot various versions of the SFMS fit. Include 2D hist with gas fraction
     #
@@ -1254,6 +1606,10 @@ if __name__ == "__main__":
     #
     # plot gas fraction as function of distance to SFMS
     # 
+    plot_fgas_DSFMS_panel(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE',"MUFASA"], remove_zeros = False)
+
+    plot_fgas_DSFMS_panel(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE',"MUFASA"], remove_zeros = False, log_fgas = True)
+
     plot_fgas_DSFMS(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], remove_zeros = False)
     plot_fgas_DSFMS(method = 'binned', include_range = 'IQR', datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], log_fgas = True, remove_zeros=True)
 
@@ -1269,8 +1625,10 @@ if __name__ == "__main__":
     # gas fraction vs sSFR and variations
     #
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA)
+    plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, add_observations=True)
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, remove_zeros = True)
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True, remove_zeros=True)
+    plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True, remove_zeros=True, add_observations=True)
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True, remove_zeros=True, ssfr_bins = np.arange(-20.5,-8.9,0.2), extra_label = '_extended')
     plot_fgas_ssfr(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, log_fgas = True)
 
