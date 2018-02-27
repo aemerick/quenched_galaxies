@@ -38,7 +38,7 @@ _data_path = _home + "Data/"
 
 # set colors associated with datasets
 colors = {'Illustris' : 'C9', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C0', 'Bradford2015' : 'C5',
-          'catinella13' : 'C4', 'brown15' : 'black'}
+          'catinella13' : 'C4', 'brown15' : 'black', 'MUFASA_ari' : 'navy'}
 
 #
 # Data file paths. If multiple for a single dataset, give as list. This is handled later to combine to single
@@ -57,7 +57,8 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
               'EAGLE'             : ['EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt', 
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
                                      'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt'],
-              'NSA_catalog'       : 'dickey_NSA_iso_lowmass_gals.txt'}
+              'NSA_catalog'       : 'dickey_NSA_iso_lowmass_gals.txt',
+              'MUFASA_ari'        : 'ari_mufasa_halos_m50n512_z0.0.txt'}
 
 #
 #
@@ -74,7 +75,8 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 
                'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']}),
                'Brooks'    : [ _np.dtype( {'names' : ['Sim','Grp','Mstar','Mvir','SFR_10Myr','SFR_1Gyr','time_last_SF','MHI', 'X','Y','Z','VX','VY','VZ','parent'], 'formats' : ['U5','U3'] + ['f8']*12 + ['u1']}),
                                _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})],
-               'NSA_catalog' : _np.dtype({'names' : ['NSAID', 'log_Mstar', 'DHOST', 'D4000', 'HAEW', 'HALPHA_SFR', 'HALPHA_SSFR'] , 'formats' : ['int'] + ['f8']*6})
+               'NSA_catalog' : _np.dtype({'names' : ['NSAID', 'log_Mstar', 'DHOST', 'D4000', 'HAEW', 'HALPHA_SFR', 'HALPHA_SSFR'] , 'formats' : ['int'] + ['f8']*6}),
+               'MUFASA_ari' : _np.dtype({'names' : ['Mvir','Mstar','MHI','MH2'], 'formats' : ['f8']*4})
               }
 
 delimiters = {} # assign delimiters and exceptions
@@ -145,6 +147,17 @@ for k in data_files.keys():
     else: # single data file to load
         for l in _data[k].dtype.names:
             data[k][l] = _data[k][l]
+
+
+data['MUFASA_ari']['Mcold'] = data['MUFASA_ari']['MHI'] + data['MUFASA_ari']['MH2']
+for k in data['MUFASA_ari'].keys():
+    data['MUFASA_ari']['log_' + k] = -99 * _np.ones(_np.size(data['MUFASA_ari'][k]))
+    select = data['MUFASA_ari'][k] > 0
+    data['MUFASA_ari']['log_' + k][select] = _np.log10(data['MUFASA_ari'][k][select])
+
+
+
+
 
 # screw with SCSAM data
 data['SCSAM']['Mhalo']       = data['SCSAM']['mhalo']        * 1.0E9
@@ -240,6 +253,7 @@ def _compute_fgas(mstar, mgas, log = True):
 data['Illustris']['fgas'] = _compute_fgas(data['Illustris']['log_Mstar'], data['Illustris']['log_MHI'])
 #data['SAM']['fgas'] = _compute_fgas(data['SAM']['log_Mstar'], data['SAM']['log_Mcold'])
 data['MUFASA']['fgas'] = _compute_fgas(data['MUFASA']['log_Mstar'], data['MUFASA']['log_Mcold'])
+data['MUFASA_ari']['fgas'] = _compute_fgas(data['MUFASA_ari']['log_Mstar'], data['MUFASA_ari']['log_Mcold'])
 data['EAGLE']['fgas']  = _compute_fgas(data['EAGLE']['log_Mstar'], data['EAGLE']['log_Mcold'])
 data['Bradford2015']['fgas'] = _compute_fgas(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'])
 data['Brooks']['fgas'] = _compute_fgas(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'])
@@ -270,8 +284,6 @@ for k in ['_10Myr','_1Gyr']:
 
 #for k in ['_100kyr', '_100Myr']:
 #    data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
-
-
 
 
 
@@ -316,6 +328,8 @@ if HI_APPROXIMATION: # compute M_HI from M_cold
     print "CAUTION: HI Approximation on - cold gas mass converted to HI with constant factor of ", f_HI
     for k in data.keys():
         if k == 'NSA_catalog':
+            continue
+        if k == 'MUFASA_ari':
             continue
 
         if not 'log_MHI' in data[k].keys():
