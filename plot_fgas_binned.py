@@ -155,6 +155,98 @@ def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = '1Gyr',
     
     return
 
+def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = None,
+                            log_fgas = False, datasets = SIM_DATA, cmap = 'viridis',figdim=(1,4)):
+    """
+    Plot 2D histograms for each simulation indvidually as panels of gas fraction vs. stellar
+    mass. By default, shading is by fraction of galaxies in a given bin.
+    """
+
+    if fgas_bins is None:
+
+        if log_fgas:
+            fgas_bins = np.linspace(-4, 0, np.size(mstar_bins))
+        else:
+            fgas_bins = np.linspace(0.0, 1.0, np.size(mstar_bins))
+    if log_fgas:
+        ylabel = r'log(f$_{\rm gas}$)'
+        xpos_label = 8.5
+        ypos_label = -3.75
+    else:
+        ylabel = r'f$_{\rm gas}$'
+        xpos_label = 11.
+        ypos_label = 0.925
+
+    fig, ax = plt.subplots(figdim[0],figdim[1], sharey=True, sharex=True)  # change hard coding
+    fig.set_size_inches(figdim[1]*6,figdim[0]*6) 
+
+    if figdim == (2,2):
+        ax_indexes = [(0,0),(0,1),(1,0),(1,1)]
+    else:
+        ax_indexes = [0,1,2,3]
+
+    for axi, k in zip( ax_indexes, datasets):
+        fgas   = data[k]['fgas']
+        Mstar  = data[k]['log_Mstar']
+
+        if log_fgas:
+            select = fgas > 0
+            fgas  = np.log10(fgas[select])
+            Mstar = Mstar[select]
+
+        ngal   = np.size(fgas)
+
+        N, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, fgas, np.ones(np.shape(fgas)),
+                                                        statistic = 'count', bins = (mstar_bins, fgas_bins))
+
+        fraction = N / (1.0 * ngal)
+        fraction[fraction <= 0] = -99
+        fraction[fraction >  0] = np.log10(fraction[fraction > 0])
+        fraction = np.log10(N / (1.0 * ngal))
+
+        xmesh, ymesh = np.meshgrid(x_edge, y_edge)
+
+        # may need to log the fraction
+        vmin =  -4.0
+        vmax =  -1
+
+        img1 = ax[axi].pcolormesh(xmesh, ymesh, fraction.T, 
+                                  cmap = cmap, vmin = vmin, vmax = vmax)
+
+        if axi == ax_indexes[0]:
+            ax[axi].set_ylabel(ylabel)
+        elif axi == ax_indexes[-1]:
+            divider = make_axes_locatable(ax[axi])
+            cax1 = divider.append_axes('right', size = '5%', pad = 0.05)
+            cbar_label = r'log(Fraction of Galaxies)'
+            fig.colorbar(img1, cax=cax1, label = cbar_label)
+        
+
+        dx = mstar_bins[1] - mstar_bins[0]
+        dx = 0
+        ax[axi].set_xlim( np.min(mstar_bins) - dx, np.max(mstar_bins) + dx)
+        dx = fgas_bins[1] - fgas_bins[0]
+        dx = 0
+        ax[axi].set_ylim( np.min(fgas_bins)  - dx, np.max(fgas_bins) + dx)
+
+        ax[axi].set_xlabel(r'log( M$_{*}$ [M$_{\odot}$])')
+
+
+        ax[axi].text(xpos_label, ypos_label, k)
+        plt.minorticks_on()
+
+    plt.tight_layout(h_pad = 0, w_pad = 0.05)
+    plt.minorticks_on()
+    outname = 'fgas_mstar_2D'
+    if log_fgas:
+        outname += '_log_fgas'
+
+    fig.savefig(outname + '.png')
+    plt.close()
+
+    return
+        
+
 def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange(-4, 2, 0.1),
                       remove_zero = True, SFR_type = '1Gyr', log_fgas = False,
                       datasets = SIM_DATA):
@@ -1595,6 +1687,9 @@ if __name__ == "__main__":
 
 
     plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE','MUFASA','Brooks'])
+
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'])
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'], log_fgas = True)
     #
     # Plot various versions of the SFMS fit. Include 2D hist with gas fraction
     #
@@ -1616,10 +1711,12 @@ if __name__ == "__main__":
     #
     # gas mass vs stellar mass
     # 
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = SIM_DATA)
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 1)
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 2)
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford')
+    GM_SM_data = SIM_DATA + ['MUFASA_ari']
+    GM_SM_data_obs = ALL_DATA + ['MUFASA_ari']
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = GM_SM_data)
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = GM_SM_data, rhalf = 1)
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = GM_SM_data, rhalf = 2)
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = GM_SM_data_obs)
 
     #
     # gas fraction vs sSFR and variations
@@ -1635,10 +1732,13 @@ if __name__ == "__main__":
     #
     # make all gas fraction vs stellar mass plots and variants
     #
-    plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = SIM_DATA)
-    plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford')
-    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA)
-    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, observational_limits = 'Bradford')
+    fgas_MStar_data     = SIM_DATA + ['MUFASA_ari']
+    fgas_MStar_data_obs = ALL_DATA + ['MUFASA_ari']
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = fgas_MStar_data)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = fgas_MStar_data_obs)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = fgas_MStar_data)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, observational_limits = 'Bradford', datasets = fgas_MStar_data_obs)
+        # with spatial information
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA, rhalf = 1)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 1)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA, rhalf = 2)
@@ -1646,8 +1746,8 @@ if __name__ == "__main__":
 
     # do above as histograms
     #
-    plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA', 'Bradford2015'])
-    plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA','Bradford2015'])
+    plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA', 'Bradford2015','MUFASA_ari'])
+    plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA','Bradford2015','MUFASA_ari'])
 
     #
     # gas fraction as a function of ssfr histograms
