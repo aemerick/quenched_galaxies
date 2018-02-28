@@ -248,18 +248,31 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
         
 
 def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange(-4, 2, 0.1),
-                      remove_zero = True, SFR_type = '1Gyr', log_fgas = False,
-                      datasets = SIM_DATA):
+                      remove_zero = True, SFR_type = '1Gyr', log_fgas = False, statistic = 'median',
+                      show_fit = True, datasets = SIM_DATA, figdim = (1,4)):
     """
     Plot the SFMS fits for each simulation individually as panels. For simplicity,
     will just be plotting median and IQR for now, but should move to doing 
-    contours / points.
+    contours / points. 
+
+    statistic sets what statistic to compute for gas fraction. Default is median. This can be set
+    to "fraction", for example, to plot density of points in a bin
     """
 
-    fig, ax = plt.subplots(2,2) # hard coded for now - not good
-    fig.set_size_inches(16,16)
+    if statistic == 'fraction':
+        print "Not yet done coding this"
+        raise ValueError
 
-    for axi, k in zip( [(0,0),(0,1),(1,0),(1,1)], datasets):
+
+    fig, ax = plt.subplots(figdim[0],figdim[1], sharey=True, sharex=True)  # change hard coding
+    fig.set_size_inches(figdim[1]*6,figdim[0]*6) 
+
+    if figdim == (2,2):
+        ax_indexes = [(0,0),(0,1),(1,0),(1,1)]
+    else:
+        ax_indexes = [0,1,2,3]
+
+    for axi, k in zip( ax_indexes, datasets):
         
         SFR   = data[k]['log_SFR_' + SFR_type]
         Mstar = data[k]['log_Mstar']
@@ -283,35 +296,37 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
             cmap = "RdYlBu_r"
             cmap = "PRGn"
 
-        median, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, SFR, fgas, statistic = 'median', bins = (mstar_bins, sfr_bins))
+        stat, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, SFR, fgas, statistic = statistic,
+                                                             bins = (mstar_bins, sfr_bins))
         xmesh, ymesh = np.meshgrid(x_edge, y_edge)
 
-        img1 = ax[axi].pcolormesh(xmesh, ymesh, median.T, 
+        img1 = ax[axi].pcolormesh(xmesh, ymesh, stat.T, 
                                   cmap = cmap, vmin = vmin, vmax = vmax)
-        divider = make_axes_locatable(ax[axi])
-        cax1 = divider.append_axes('right', size = '5%', pad = 0.05)
-        if log_fgas:
-            cbar_label = r'log(f$_{\rm gas}$)'
-        else:
-            cbar_label = r'f$_{\rm gas}$'
 
-        fig.colorbar(img1, cax=cax1, label = cbar_label)
+        if axi == ax_indexes[0]:
+            ax[axi].set_ylabel(r'log( SFR (M$_{\odot}$ yr$^{-1}$)')
+        elif axi == ax_indexes[-1]:
+            divider = make_axes_locatable(ax[axi])
+            cax1 = divider.append_axes('right', size = '5%', pad = 0.05)
+            if log_fgas:
+                cbar_label = r'log(f$_{\rm gas}$)'
+            else:
+                cbar_label = r'f$_{\rm gas}$'
+            fig.colorbar(img1, cax=cax1, label = cbar_label)
 
-        #c = plt.colorbar(p1, ax = ax[axi], pad = 0.0015, aspect=10)
 
-        ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
-                     lw = line_width, ls = '--', color = 'black')
+        if show_fit:
+            ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
+                         lw = line_width, ls = '--', color = 'black')
 
         ax[axi].set_xlim(7.8, 12.5)
         ax[axi].set_ylim(-3.5, 2)
-#        ax[axi].legend(loc='upper left')
         ax[axi].text(8.2, 1.5, k)
 
         ax[axi].set_xlabel(r'log( M$_{*}$ [M$_{\odot}$])')
-        ax[axi].set_ylabel(r'log( SFR (M$_{\odot}$ yr$^{-1}$)')
         plt.minorticks_on()
 
-    plt.tight_layout(h_pad = 1)
+    plt.tight_layout(h_pad = 0, w_pad = 0.05)
     plt.minorticks_on()
 
     outname = 'SFMS_fits_2dhist'
@@ -320,7 +335,8 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
         outname += '_log_fgas'
 
     fig.savefig(outname + '.png')
-    
+    plt.close()
+
     return
 
 
@@ -1018,6 +1034,55 @@ def plot_fgas_DSFMS_panel(method   = 'binned', include_range = 'IQR', DSFMS_bins
     plt.close()
     return
 
+def plot_no_gas(mstar_bins = MSTAR_BINS, datasets = ALL_DATA):
+
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8,8)
+
+
+    def _compute_and_plot(ax, x, all_x, bins, label, *args, **kwargs):
+        
+        hist, bins = np.histogram(x, bins = bins)
+        full_hist, bins = np.histogram(all_x, bins = bins)
+
+        hist = hist / ( 1.0 * full_hist)
+
+#        hist = hist
+        plot_histogram(ax, bins, hist, label = label, **kwargs)
+
+
+        return
+
+    for k in datasets:
+        all_Mstar = data[k]['log_Mstar']
+        fgas  = data[k]['fgas']
+
+        gasless = fgas <= 1.0E-90
+
+        Mstar     = all_Mstar[gasless]
+        N_gasless = np.size(Mstar)
+
+        print '---------------', k, N_gasless
+
+        label = k + r'  (%0.1f %%)'%(100.0 * N_gasless / (1.0 * np.size(all_Mstar)))
+        _compute_and_plot(ax, Mstar, all_Mstar, mstar_bins, label,
+                          lw = line_width, color = colors[k], ls = '-')
+
+    ax.set_xlabel(r'log(M$_{*}$) [M$_{\odot}$])')
+    ax.set_ylabel(r'Fraction Per Bin')
+    ax.semilogy()
+
+    ax.set_xlim(8.0, 12.0)
+    ax.set_ylim(1.0E-4, 0.6)
+
+    plt.minorticks_on()
+    ax.legend(loc='best')
+    plt.tight_layout()
+
+    fig.savefig('gasless_fraction_mstar.png')
+    plt.close()
+    return
+
 def plot_fgas_mstar(method = 'scatter', include_range = None,
                     mstar_bins = MSTAR_BINS, log_fgas = False, rhalf = None,
                     remove_zero = None,
@@ -1685,6 +1750,7 @@ def plot_sfr_mgas(method = 'binned', include_range = 'IQR',
 
 if __name__ == "__main__":
 
+    plot_no_gas(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'])
 
     plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE','MUFASA','Brooks'])
 
@@ -1695,6 +1761,7 @@ if __name__ == "__main__":
     #
     plot_SFMS(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
     plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
+    plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], statistic = 'count', show_fit = False)
     plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], log_fgas = True)
 
 
