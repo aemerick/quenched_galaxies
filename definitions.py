@@ -38,7 +38,7 @@ _data_path = _home + "Data/"
 
 # set colors associated with datasets
 colors = {'Illustris' : 'C9', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C0', 'Bradford2015' : 'C5',
-          'catinella13' : 'C4', 'brown15' : 'black', 'MUFASA_ari' : 'navy'}
+          'catinella13' : 'C4', 'brown15' : 'black', 'MUFASA_ari' : 'navy', 'xGASS' : 'black'}
 
 #
 # Data file paths. If multiple for a single dataset, give as list. This is handled later to combine to single
@@ -51,6 +51,7 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
                                      'project3_Illustris1_individual_galaxy_values_all1e8Msunh_z0.csv'],
               #'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
               'SCSAM'                : 'newSCSAMgalprop.dat',
+              'xGASS'             : 'xGASS_representative_sample.ascii.txt',
               #'SAM_cen_and_sat'   : "SAM_group_catalog_cenANDsat.dat",
               'Brooks'            : ["brooks_updated_catalog.dat","brooks.cca.centrals_info.dat"],
               'MUFASA'            : "MUFASA_GALAXY.txt",
@@ -71,12 +72,12 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 
                                _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh'], 'formats' : ['f8']*13})],
                #'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
                'SCSAM' : None, # load elsewhere
-
+               'xGASS' : None,
                'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']}),
                'Brooks'    : [ _np.dtype( {'names' : ['Sim','Grp','Mstar','Mvir','SFR_10Myr','SFR_1Gyr','time_last_SF','MHI', 'X','Y','Z','VX','VY','VZ','parent'], 'formats' : ['U5','U3'] + ['f8']*12 + ['u1']}),
                                _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})],
                'NSA_catalog' : _np.dtype({'names' : ['NSAID', 'log_Mstar', 'DHOST', 'D4000', 'HAEW', 'HALPHA_SFR', 'HALPHA_SSFR'] , 'formats' : ['int'] + ['f8']*6}),
-               'MUFASA_ari' : _np.dtype({'names' : ['Mvir','Mstar','MHI','MH2'], 'formats' : ['f8']*4})
+               'MUFASA_ari' : _np.dtype({'names' : ['Mhalo','Mstar','MHI','MH2'], 'formats' : ['f8']*4})
               }
 
 delimiters = {} # assign delimiters and exceptions
@@ -135,6 +136,19 @@ scdata = scdata[scdata['mstar'] > 0]
 _data['SCSAM'] = scdata
 
 #
+#
+#    remove xGASS detections that are marginal (2), confused (5), or both (3)
+#    take only isolated centrals
+#    including upper limits for now
+xgass = _np.genfromtxt(_data_path + data_files['xGASS'], names = True)
+xgass = xgass[ (xgass['HI_FLAG'] != 2) *\
+               (xgass['HI_FLAG'] != 3) *\
+               (xgass['HI_FLAG'] != 5)]
+xgass = xgass[ xgass['env_code_B'] == 1 ] # isolated centrals
+#  data['XGASS'] = data['xGASS'][ data['xGASS']['HIsrc'] != 4] # remove non-detections
+_data['xGASS'] = xgass
+
+#
 # now for each case, stitch together the files using
 #
 data = {}
@@ -169,7 +183,6 @@ data['SCSAM']['SFR_1Gyr']    = data['SCSAM']['sfr_ave1G']
 data['SCSAM']['sSFR_100Myr'] = data['SCSAM']['SFR_100Myr']   / data['SCSAM']['Mstar']
 data['SCSAM']['sSFR_1Gyr']   = data['SCSAM']['SFR_1Gyr']     / data['SCSAM']['Mstar']
 data['SCSAM']['sSFR_20Myr']  = data['SCSAM']['SFR_20Myr']    / data['SCSAM']['Mstar']
-
 data['SCSAM']['log_SFR_20Myr']   = _np.log10(data['SCSAM']['sfr_ave20M'])
 data['SCSAM']['log_SFR_100Myr']  = _np.log10(data['SCSAM']['sfr_ave100M'])
 data['SCSAM']['log_SFR_1Gyr']    = _np.log10(data['SCSAM']['sfr_ave1G'])
@@ -182,6 +195,26 @@ data['SCSAM']['log_SFR_10Myr'] = data['SCSAM']['log_SFR_20Myr']
 
 for k in ['SFR_100Myr','sSFR_100Myr','SFR_1Gyr','sSFR_1Gyr', 'Mhalo','Mstar','Mcold']:
     data['SCSAM']['log_' + k] = _np.log10(data['SCSAM'][k])
+
+
+# rename some things in the xGASS dataset
+#
+
+data['xGASS']['log_Mstar'] = data['xGASS']['lgMstar']
+data['xGASS']['SFR']       = data['xGASS']['SFR_best']
+data['xGASS']['log_MHI']   = data['xGASS']['lgMHI']
+data['xGASS']['log_Mhalo'] = data['xGASS']['logMh_Mst_B'] # using group catalog and stellar mass function
+
+
+for k in ['Mstar','MHI', 'Mhalo']:
+    data['xGASS'][k] = 10.0**(data['xGASS']['log_' + k])
+
+for k in ['SFR']:
+    data['xGASS']['log_' + k] = -99.0 * _np.ones(_np.size(data['xGASS'][k]))
+    select = data['xGASS'][k] > 0
+    data['xGASS']['log_' + k][select] = _np.log10(data['xGASS'][k][select])
+data['xGASS']['log_SFR_1Gyr']       = data['xGASS']['log_SFR']    
+
 
 # compute some things for Brooks dataset:
 data['Brooks']['SFR_100Myr']     = data['Brooks']['Mstar_100Myr']     / ( 100.0E6)  #  SFR in Msun / yr
@@ -238,6 +271,8 @@ for select, i in enumerate(data['Bradford2015']['NSAID']):
 data['Bradford2015']['SFR_Halpha']  = 10.0**(data['Bradford2015']['log_SFR_Halpha'])
 data['Bradford2015']['sSFR_Halpha'] = 10.0**(data['Bradford2015']['log_sSFR_Halpha'])
 
+data['Bradford2015']['log_SFR_1Gyr'] = data['Bradford2015']['log_SFR_Halpha']
+
 print "BRADFORD: ", _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] < -90]), _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] > -90])
 
 #
@@ -258,6 +293,7 @@ data['EAGLE']['fgas']  = _compute_fgas(data['EAGLE']['log_Mstar'], data['EAGLE']
 data['Bradford2015']['fgas'] = _compute_fgas(data['Bradford2015']['log_Mstar'], data['Bradford2015']['log_MHI'])
 data['Brooks']['fgas'] = _compute_fgas(data['Brooks']['log_Mstar'], data['Brooks']['log_MHI'])
 data['SCSAM']['fgas'] = _compute_fgas(data['SCSAM']['log_Mstar'], data['SCSAM']['log_Mcold'])
+data['xGASS']['fgas'] = _compute_fgas(data['xGASS']['log_Mstar'], data['xGASS']['log_MHI'])
 
 for k in data.keys():
     if ('log_Mstar_1Rh' in data[k].keys()) and (('log_MHI_1Rh' in data[k].keys()) or ('log_Mcold_1Rh' in data[k].keys())):

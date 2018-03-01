@@ -139,8 +139,11 @@ def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = '1Gyr',
         ax[axi].fill_between(computed_stats['x'], computed_stats['Q10'], computed_stats['Q90'], facecolor = colors[k],
                              interpolate = True, lw = line_width, alpha = 0.1)
 
-        ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
-                     lw = line_width, ls = '--', color = 'black')
+        try:
+            ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
+                         lw = line_width, ls = '--', color = 'black')
+        except:
+            print "I'm a lazy programmer"
 
         ax[axi].set_xlim(np.min(mstar_bins), np.max(mstar_bins))
         ax[axi].set_ylim(-4, 2)
@@ -155,7 +158,124 @@ def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = '1Gyr',
     
     return
 
-def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = None,
+
+def plot_halo_stellar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.05), halo_bins = np.arange(8.0, 15.0, 0.05),
+                              statistic = 'fraction',
+                              log_fgas = False, datasets = SIM_DATA, cmap = 'viridis',figdim=(1,4)):
+    """
+    Plot 2D histograms for each simulation indvidually as panels of gas fraction vs. stellar
+    mass. By default, shading is by fraction of galaxies in a given bin.
+    """
+
+    fig, ax = plt.subplots(figdim[0],figdim[1], sharey=True, sharex=True)  # change hard coding
+    fig.set_size_inches(figdim[1]*6,figdim[0]*6) 
+
+    if figdim == (2,2):
+        ax_indexes = [(0,0),(0,1),(1,0),(1,1)]
+    else:
+        ax_indexes = np.arange(figdim[1])
+
+    stat_name = statistic
+    if statistic == 'count':
+        cbar_label = r'log(Number of Galaxies)'
+        vmin = 0
+        vmax = 3
+        cmap = 'viridis'
+    elif statistic == 'fraction':
+        cbar_label = r'log(Fraction of Galaxies)'
+        # may need to log the fraction
+        vmin =  -4.0
+        vmax =  -2.0
+        stat_name = 'count'
+        cmap = 'magma'
+    elif statistic == 'median':
+        cbar_label = r'f$_{\rm gas}$'
+        vmin = 0.0
+        vmax = 1.0
+        cmap = 'PRGn'
+
+
+    xpos_label = 13.75
+    ypos_label = 8.25
+
+    for axi, k in zip( ax_indexes, datasets):
+
+        if (not 'log_Mhalo' in data[k].keys()):
+            if ('Mhalo' in data[k].keys()):
+                data[k]['log_Mhalo'] = np.log10(data[k]['Mhalo'])
+            else:
+                ax[0].set_ylabel(r'log(M$_{*}$ [M$_{\odot}$])')
+                continue
+
+        Mhalo  = data[k]['log_Mhalo']
+        Mstar  = data[k]['log_Mstar']
+
+
+        ngal   = np.size(Mstar)
+
+        if statistic == 'count' or statistic == 'fraction':
+            statistic_data = np.ones(ngal)
+        else:
+            statistic_data = data[k]['fgas']
+
+        N, x_edge, y_edge, binnum = binned_statistic_2d(Mhalo, Mstar, statistic_data,
+                                                        statistic = stat_name, bins = (halo_bins, mstar_bins))
+
+        if statistic == 'fraction':
+            fraction = N / (1.0 * ngal)
+            fraction[fraction <= 0] = -99
+            fraction[fraction >  0] = np.log10(fraction[fraction > 0])
+            fraction = np.log10(N / (1.0 * ngal))
+            plot_val = fraction
+        else:
+            plot_val = N
+
+
+        xmesh, ymesh = np.meshgrid(x_edge, y_edge)
+
+
+
+        img1 = ax[axi].pcolormesh(xmesh, ymesh, plot_val.T, 
+                                  cmap = cmap, vmin = vmin, vmax = vmax)
+
+        if axi == ax_indexes[0]:
+            ax[axi].set_ylabel(ylabel)
+        elif axi == ax_indexes[-1]:
+            divider = make_axes_locatable(ax[axi])
+            cax1 = divider.append_axes('right', size = '5%', pad = 0.05)
+            fig.colorbar(img1, cax=cax1, label = cbar_label)
+        
+
+        dx = mstar_bins[1] - mstar_bins[0]
+        dx = 0
+        ax[axi].set_ylim(8.0,12.0) #np.min(mstar_bins) - dx, np.max(mstar_bins) + dx)
+        dx = halo_bins[1] - halo_bins[0]
+        dx = 0
+        ax[axi].set_xlim(10.0, 15.0) #np.min(halo_bins)  - dx, np.max(halo_bins) + dx)
+
+
+        ax[axi].set_xlabel(r'log( M$_{\rm vir}$ [M$_{\odot}$])')
+
+        ax[axi].text(xpos_label, ypos_label, k)
+        plt.minorticks_on()
+
+    plt.tight_layout(h_pad = 0, w_pad = 0.05)
+    plt.minorticks_on()
+    
+    outname = 'halo_stellar_2D_' + statistic
+    
+    if log_fgas:
+        outname += '_log_fgas'
+
+    fig.savefig(outname + '.png')        
+
+    plt.close()
+
+    return
+
+
+
+def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = None, halo_ratio = False,
                             log_fgas = False, datasets = SIM_DATA, cmap = 'viridis',figdim=(1,4)):
     """
     Plot 2D histograms for each simulation indvidually as panels of gas fraction vs. stellar
@@ -183,20 +303,40 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
     if figdim == (2,2):
         ax_indexes = [(0,0),(0,1),(1,0),(1,1)]
     else:
-        ax_indexes = [0,1,2,3]
+        ax_indexes = np.arange(figdim[1])
+
+    if halo_ratio:
+        xlabel = r'log(M$_{*}$/M$_{\rm vir}$)'
+        mstar_bins = np.arange(-4,0,0.1)
+    else:
+        xlabel = r'log(M$_{*}$ [M$_{\odot}$])'
+        
 
     for axi, k in zip( ax_indexes, datasets):
         fgas   = data[k]['fgas']
         Mstar  = data[k]['log_Mstar']
 
+        if halo_ratio: 
+            if (not 'log_Mhalo' in data[k].keys()):
+                if ('Mhalo' in data[k].keys()):
+                    data[k]['log_Mhalo'] = np.log10(data[k]['Mhalo'])
+                else:
+                    continue
+            Mhalo = data[k]['log_Mhalo']
+
+            x_data = Mstar - Mhalo
+        else:
+            x_data = Mstar
+
+
         if log_fgas:
             select = fgas > 0
             fgas  = np.log10(fgas[select])
-            Mstar = Mstar[select]
+            x_data = x_data[select]
 
         ngal   = np.size(fgas)
 
-        N, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, fgas, np.ones(np.shape(fgas)),
+        N, x_edge, y_edge, binnum = binned_statistic_2d(x_data, fgas, np.ones(np.shape(fgas)),
                                                         statistic = 'count', bins = (mstar_bins, fgas_bins))
 
         fraction = N / (1.0 * ngal)
@@ -229,7 +369,7 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
         dx = 0
         ax[axi].set_ylim( np.min(fgas_bins)  - dx, np.max(fgas_bins) + dx)
 
-        ax[axi].set_xlabel(r'log( M$_{*}$ [M$_{\odot}$])')
+        ax[axi].set_xlabel(xlabel)
 
 
         ax[axi].text(xpos_label, ypos_label, k)
@@ -237,7 +377,12 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
 
     plt.tight_layout(h_pad = 0, w_pad = 0.05)
     plt.minorticks_on()
-    outname = 'fgas_mstar_2D'
+
+    if halo_ratio:
+        outname = 'fgas_msmh_2D'
+    else:
+        outname = 'fgas_mstar_2D'
+
     if log_fgas:
         outname += '_log_fgas'
 
@@ -245,7 +390,7 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
     plt.close()
 
     return
-        
+     
 
 def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange(-4, 2, 0.1),
                       remove_zero = True, SFR_type = '1Gyr', log_fgas = False, statistic = 'median',
@@ -259,18 +404,42 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
     to "fraction", for example, to plot density of points in a bin
     """
 
-    if statistic == 'fraction':
-        print "Not yet done coding this"
-        raise ValueError
-
-
     fig, ax = plt.subplots(figdim[0],figdim[1], sharey=True, sharex=True)  # change hard coding
     fig.set_size_inches(figdim[1]*6,figdim[0]*6) 
 
     if figdim == (2,2):
         ax_indexes = [(0,0),(0,1),(1,0),(1,1)]
     else:
-        ax_indexes = [0,1,2,3]
+        ax_indexes = np.arange(figdim[1])
+
+    stat_name = statistic
+    if statistic == 'count':
+        cbar_label = r'log(Number of Galaxies)'
+        vmin = 0
+        vmax = 3
+    elif statistic == 'fraction':
+        cbar_label = r'log(Fraction of Galaxies)'
+        # may need to log the fraction
+        vmin =  -4.0
+        vmax =  -1
+        stat_name = 'count'
+        cmap = 'viridis'
+    elif statistic == 'median':     
+        if log_fgas:
+            cbar_label = r'log(f$_{\rm gas}$)'
+            vmin   = -2.5
+            vmax   = 0
+            cmap   = 'plasma'
+        else:
+            cbar_label = r'f$_{\rm gas}$'
+            vmin = 0.0
+            vmax = 1.0
+            cmap = "PRGn"
+
+    stat_name == 'statistic'
+    if statistic == 'fraction':
+        stat_name = 'count'
+
 
     for axi, k in zip( ax_indexes, datasets):
         
@@ -285,22 +454,34 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
 
         if log_fgas:
             fgas   = np.log10(fgas[select])
-            vmin   = -2.5
-            vmax   = 0
-            cmap   = 'plasma'
+
         else:
             fgas   = fgas[select]
-            vmin = 0
-            vmax = 1
-            cmap = 'viridis'
-            cmap = "RdYlBu_r"
-            cmap = "PRGn"
 
-        stat, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, SFR, fgas, statistic = statistic,
+        ngal = np.size(SFR)
+        if statistic == 'count' or statistic == 'fraction':
+            stat_field = np.ones(ngal)
+        else:
+            stat_field = fgas
+
+
+
+        stat, x_edge, y_edge, binnum = binned_statistic_2d(Mstar, SFR, stat_field, statistic = stat_name,
                                                              bins = (mstar_bins, sfr_bins))
+
+        if statistic == 'fraction':
+            fraction = stat / (1.0 * ngal)
+            fraction[fraction <= 0] = -99
+            fraction[fraction >  0] = np.log10(fraction[fraction > 0])
+            fraction = np.log10(stat / (1.0 * ngal))
+            plot_val = fraction
+        else:
+            plot_val = stat
+
+
         xmesh, ymesh = np.meshgrid(x_edge, y_edge)
 
-        img1 = ax[axi].pcolormesh(xmesh, ymesh, stat.T, 
+        img1 = ax[axi].pcolormesh(xmesh, ymesh, plot_val.T, 
                                   cmap = cmap, vmin = vmin, vmax = vmax)
 
         if axi == ax_indexes[0]:
@@ -308,16 +489,16 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
         elif axi == ax_indexes[-1]:
             divider = make_axes_locatable(ax[axi])
             cax1 = divider.append_axes('right', size = '5%', pad = 0.05)
-            if log_fgas:
-                cbar_label = r'log(f$_{\rm gas}$)'
-            else:
-                cbar_label = r'f$_{\rm gas}$'
+
             fig.colorbar(img1, cax=cax1, label = cbar_label)
 
-
+       
         if show_fit:
-            ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
-                         lw = line_width, ls = '--', color = 'black')
+            try:
+                ax[axi].plot(data[k]['SFMS_fit_' + SFR_type][0], data[k]['SFMS_fit_' + SFR_type][1],
+                             lw = line_width, ls = '--', color = 'black')
+            except:
+                print "I'm a lazy programmer"
 
         ax[axi].set_xlim(7.8, 12.5)
         ax[axi].set_ylim(-3.5, 2)
@@ -329,7 +510,7 @@ def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange
     plt.tight_layout(h_pad = 0, w_pad = 0.05)
     plt.minorticks_on()
 
-    outname = 'SFMS_fits_2dhist'
+    outname = 'SFMS_fits_2dhist_' + stat_name
 
     if log_fgas:
         outname += '_log_fgas'
@@ -1752,18 +1933,27 @@ if __name__ == "__main__":
 
     plot_no_gas(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'])
 
+    plot_halo_stellar_2D_hist(datasets=['Illustris','SCSAM','EAGLE','MUFASA_ari'])
+    plot_halo_stellar_2D_hist(datasets=['Illustris','SCSAM','EAGLE','MUFASA_ari'], statistic = 'median')
+
     plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE','MUFASA','Brooks'])
 
     plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'])
     plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'], log_fgas = True)
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'], log_fgas = True, halo_ratio = True)
+
+
+
     #
     # Plot various versions of the SFMS fit. Include 2D hist with gas fraction
     #
     plot_SFMS(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
     plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'])
-    plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], statistic = 'count', show_fit = False)
+    plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], statistic = 'fraction', show_fit = False)
     plot_SFMS_2D_hist(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA'], log_fgas = True)
 
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari','Bradford2015','xGASS'],figdim=(1,6), log_fgas = True)
+    plot_SFMS_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA','Bradford2015','xGASS'],figdim=(1,6))
 
     #
     # plot gas fraction as function of distance to SFMS
@@ -1783,7 +1973,7 @@ if __name__ == "__main__":
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = GM_SM_data)
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = GM_SM_data, rhalf = 1)
     plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', datasets = GM_SM_data, rhalf = 2)
-    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = GM_SM_data_obs)
+    plot_gas_mass_stellar_mass(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = GM_SM_data_obs + ['xGASS'])
 
     #
     # gas fraction vs sSFR and variations
@@ -1802,9 +1992,9 @@ if __name__ == "__main__":
     fgas_MStar_data     = SIM_DATA + ['MUFASA_ari']
     fgas_MStar_data_obs = ALL_DATA + ['MUFASA_ari']
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = fgas_MStar_data)
-    plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = fgas_MStar_data_obs)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = fgas_MStar_data_obs + ['xGASS'])
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = fgas_MStar_data)
-    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, observational_limits = 'Bradford', datasets = fgas_MStar_data_obs)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, observational_limits = 'Bradford', datasets = fgas_MStar_data_obs + ['xGASS'])
         # with spatial information
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = SIM_DATA, rhalf = 1)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = SIM_DATA, rhalf = 1)
