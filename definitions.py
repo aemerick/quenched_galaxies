@@ -54,10 +54,14 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
               'xGASS'             : 'xGASS_representative_sample.ascii.txt',
               #'SAM_cen_and_sat'   : "SAM_group_catalog_cenANDsat.dat",
               'Brooks'            : ["brooks_updated_catalog.dat","brooks.cca.centrals_info.dat"],
-              'MUFASA'            : "MUFASA_GALAXY.txt",
-              'EAGLE'             : ['EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt', 
+              'MUFASA'            : "MUFASA_GALAXY_extra.txt",
+              'EAGLE'             : ['0-29810EAGLE_RefL0100Hash_MHIH2Rhalfmass_allabove1.8e8Msun.txt',
+                                     '0-29810EAGLE_galIDs_MvirsMdm_RefL0100.txt',
+                                     'EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt', 
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
-                                     'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt'],
+                                     'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt',
+                                     '0-29810EAGLE_RefL0100Hash_XYZMHIH2RhalfmassOnEoST1e4_allabove1.8e8Msun.txt',
+                                     '0-29810EAGLE_galIDs_Aperture30kpc70kpcMstarMgas.txt'],
               'NSA_catalog'       : 'dickey_NSA_iso_lowmass_gals.txt',
               'MUFASA_ari'        : 'ari_mufasa_halos_m50n512_z0.0.txt'}
 
@@ -65,15 +69,19 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
 #
 # Gross bit. Set dtype and format for every column in every data file
 #
-data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mcold'], 'formats' : ['f8','f8','f8']}),
+data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum','r_half_old','log_MHI_old','log_MHI_1Rh_old','log_MHI_2Rh_old','log_MH2_old','log_MH2_1Rh_old','log_MH2_2Rh_old'], 'formats' : ['f8']*9}),
+                               _np.dtype( {'names' : ['galaxyID', 'log_Mvir', 'log_MvirMean', 'log_MDM_total'], 'formats' : ['f8']*4}),
+                               _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mcold'], 'formats' : ['f8','f8','f8']}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'r_half', 'log_Mstar', 'log_Mstar_1Rh', 'log_Mstar_2Rh'], 'formats':['f8']*6}),
-                               _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr'], 'formats' : ['f8','f8','f8','f8','f8']})],
+                               _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr', 'cen_sat'], 'formats' : ['f8','f8','f8','f8','f8','f8']}),
+                               _np.dtype( {'names' : ['GroupNum','SubGroupNum','r_half','log_Mtot','log_Mcold','log_MH_p','log_MHe_p','log_MMet_p','log_MHI','log_MHI_1Rh','log_MHI_2Rh','log_MHI_70','log_MH2','log_MH2_1Rh','log_MH2_2Rh','log_MH2_70'], 'formats' : ['f8']*16  }),
+                               _np.dtype( {'names' : ['GalaxyID','log_Mstar_30','log_Mstar_70','log_Mgas_30','log_Mgas_70'], 'formats' : ['f8']*5})],
                'Illustris' : [ _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI','Z_SF_gas','log_MBH','cen_sat'], 'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']}),
                                _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh'], 'formats' : ['f8']*13})],
                #'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
                'SCSAM' : None, # load elsewhere
                'xGASS' : None,
-               'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat'], 'formats': ['f8']*12 + ['u1']}),
+               'MUFASA'    :   _np.dtype( {'names' : ['x','y','z','vx','vy','vz','log_Mstar','log_SFR_10Myr','log_SFR_100Myr','log_SFR_1Gyr','log_Mcold','log_Z_SFR','cen_sat','log_MHI', 'log_MH2', 'log_Mhalo'], 'formats': ['f8']*13 + ['u1'] + ['f8']*3}),
                'Brooks'    : [ _np.dtype( {'names' : ['Sim','Grp','Mstar','Mvir','SFR_10Myr','SFR_1Gyr','time_last_SF','MHI', 'X','Y','Z','VX','VY','VZ','parent'], 'formats' : ['U5','U3'] + ['f8']*12 + ['u1']}),
                                _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})],
                'NSA_catalog' : _np.dtype({'names' : ['NSAID', 'log_Mstar', 'DHOST', 'D4000', 'HAEW', 'HALPHA_SFR', 'HALPHA_SSFR'] , 'formats' : ['int'] + ['f8']*6}),
@@ -107,6 +115,7 @@ for k in data_files.keys():
 
 # Filter out some things for specific data sets before making into a dictionary
 _data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]             # remove satellites
+
 
 _data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1]       # remove satellites
 _data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
@@ -162,8 +171,34 @@ for k in data_files.keys():
         for l in _data[k].dtype.names:
             data[k][l] = _data[k][l]
 
+#
+# select centrals only from EAGLE dataset
+#
+select = data['EAGLE']['cen_sat'] == 1
+for k in data['EAGLE'].keys():
+    data['EAGLE'][k] = data['EAGLE'][k][select]
+
+# make sure logged values that are zero are non-zero (set to -99 as flag)
+#
+for k in ['MHI','MH2','MHI_70','MH2_70','Mstar_30','Mstar_70','Mstar','Mgas_30','Mgas_70','Mcold','MHI_old','MH2_old','MH_p','MHe_p']:
+    data['EAGLE'][k] = 10.0**(data['EAGLE']['log_' + k])
+    data['EAGLE']['log_' + k] = -99 * _np.ones(_np.size(data['EAGLE'][k]))
+    select = data['EAGLE'][k] > 0
+    data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
+k = 'MHI_MH2'
+data['EAGLE'][k] = data['EAGLE']['MHI'] + data['EAGLE']['MH2']
+data['EAGLE']['log_' + k] = -99 * _np.ones(_np.size(data['EAGLE'][k]))
+select = data['EAGLE'][k] > 0
+data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
+
+#data['EAGLE']['log_MHI_MH2'] = _np.log10(data['EAGLE']['MHI_MH2'])
+
 
 data['MUFASA_ari']['Mcold'] = data['MUFASA_ari']['MHI'] + data['MUFASA_ari']['MH2']
+data['MUFASA']['MHI'] = 10.0**(data['MUFASA']['log_MHI'])
+data['MUFASA']['MH2'] = 10.0**(data['MUFASA']['log_MH2'])
+data['MUFASA']['Mcold'] = data['MUFASA']['MHI'] + data['MUFASA']['MH2']
+data['MUFASA']['log_Mcold'] = _np.log10(data['MUFASA']['Mcold'])
 for k in data['MUFASA_ari'].keys():
     data['MUFASA_ari']['log_' + k] = -99 * _np.ones(_np.size(data['MUFASA_ari'][k]))
     select = data['MUFASA_ari'][k] > 0
@@ -307,16 +342,17 @@ for k in data.keys():
 
 #
 #
-for k in ['_10Myr','_1Gyr']:
+for k in ['_10Myr','_100Myr','_1Gyr']:
     data['MUFASA']['SFR' + k] = 10.0**(data['MUFASA']['log_SFR' + k])
     data['MUFASA']['SFR' + k][ data['MUFASA']['log_SFR' + k] == -99.0 ] = 0.0 # flag for zero
     data['MUFASA']['sSFR' + k] = data['MUFASA']['SFR' + k] / 10.0**(data['MUFASA']['log_Mstar'])
 
-    data['EAGLE']['log_SFR' + k] = _np.log10(data['EAGLE']['SFR' + k])
-    data['EAGLE']['log_SFR' + k][ data['EAGLE']['log_SFR' + k] == -_np.inf] = -99.0
+    if not k == '_100Myr':
+        data['EAGLE']['log_SFR' + k] = _np.log10(data['EAGLE']['SFR' + k])
+        data['EAGLE']['log_SFR' + k][ data['EAGLE']['log_SFR' + k] == -_np.inf] = -99.0
 
-    data['EAGLE']['sSFR' + k] = data['EAGLE']['SFR' + k] / 10.0**(data['EAGLE']['log_Mstar'])
-    data['EAGLE']['log_sSFR' + k] = _np.log10(data['EAGLE']['sSFR' + k])
+        data['EAGLE']['sSFR' + k] = data['EAGLE']['SFR' + k] / 10.0**(data['EAGLE']['log_Mstar'])
+        data['EAGLE']['log_sSFR' + k] = _np.log10(data['EAGLE']['sSFR' + k])
 
 #for k in ['_100kyr', '_100Myr']:
 #    data['SAM']['sSFR' + k] = 10.0**(data['SAM']['log_sSFR' + k])
@@ -350,7 +386,7 @@ def _fit_sfms(sim_name, years):
 _fit_sfms('Illustris', ['10Myr','20Myr','1Gyr'])
 # _fit_sfms('Brooks'   , ['100Myr','1Gyr'])
 _fit_sfms('EAGLE'    , ['10Myr','1Gyr'])
-_fit_sfms('MUFASA'   , ['10Myr','1Gyr'])
+_fit_sfms('MUFASA'   , ['10Myr','100Myr','1Gyr'])
 _fit_sfms('SCSAM'    , ['20Myr','100Myr','1Gyr'])
 
 
