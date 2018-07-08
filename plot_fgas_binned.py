@@ -644,6 +644,11 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
                     continue
 
             x = data[k]['log_Mstar' + rhalf_str]
+
+            #if k == 'EAGLE' and rhalf_str == '':
+            #    y = data[k]['log_MHI_MH2' + rhalf_str]
+            #    y = data[k]['log_Mcold']
+
             if 'log_MHI' + rhalf_str in data[k].keys():
                 y = data[k]['log_MHI' + rhalf_str]
             else:
@@ -1931,16 +1936,16 @@ def plot_sfr_mgas(method = 'binned', include_range = 'IQR',
 
 if __name__ == "__main__":
 
-    plot_no_gas(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'])
+    plot_no_gas(datasets = ['Illustris','SCSAM','EAGLE','MUFASA'])
 
-    plot_halo_stellar_2D_hist(datasets=['Illustris','SCSAM','EAGLE','MUFASA_ari'])
-    plot_halo_stellar_2D_hist(datasets=['Illustris','SCSAM','EAGLE','MUFASA_ari'], statistic = 'median')
+    plot_halo_stellar_2D_hist(datasets=['Illustris','SCSAM','EAGLE','MUFASA'])
+    plot_halo_stellar_2D_hist(datasets=['Illustris','SCSAM','EAGLE','MUFASA'], statistic = 'median')
 
     plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE','MUFASA','Brooks'])
 
-    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'])
-    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'], log_fgas = True)
-    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA_ari'], log_fgas = True, halo_ratio = True)
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA'])
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], log_fgas = True)
+    plot_fgas_mstar_2D_hist(datasets = ['Illustris','SCSAM','EAGLE','MUFASA'], log_fgas = True, halo_ratio = True)
 
 
 
@@ -1989,8 +1994,8 @@ if __name__ == "__main__":
     #
     # make all gas fraction vs stellar mass plots and variants
     #
-    fgas_MStar_data     = SIM_DATA + ['MUFASA_ari']
-    fgas_MStar_data_obs = ALL_DATA + ['MUFASA_ari']
+    fgas_MStar_data     = SIM_DATA #+ ['MUFASA_ari']
+    fgas_MStar_data_obs = ALL_DATA #+ ['MUFASA_ari']
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = fgas_MStar_data)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = fgas_MStar_data_obs + ['xGASS'])
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = fgas_MStar_data)
@@ -2003,8 +2008,8 @@ if __name__ == "__main__":
 
     # do above as histograms
     #
-    plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA', 'Bradford2015','MUFASA_ari'])
-    plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA','Bradford2015','MUFASA_ari'])
+    plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE','MUFASA', 'Bradford2015'])
+    plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA','Bradford2015'])
 
     #
     # gas fraction as a function of ssfr histograms
