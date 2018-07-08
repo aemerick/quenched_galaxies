@@ -1,28 +1,28 @@
 """
-   This file defines the filepaths and data structures for each of the 
-   data files, loads the data into a single dictionary with uniform 
+   This file defines the filepaths and data structures for each of the
+   data files, loads the data into a single dictionary with uniform
    keyword names across simulations for *most* parameters, and calculates
    additional dataset information to either generalize existing information
    (e.x. SFR's to sSFR's and vice-versa) or compute new properties (e.x. gas
-   fraction). 
+   fraction).
 
-   Warning: This is is a very ugly script. I did a lot of hard coding for
-   specific data files in order to minimize time spent coding this up. 
+   Warning: This is is a very ugly script. I did some hard coding for
+   specific data files in order to minimize time spent coding this up.
    Generalizing this to readily read in any file (provided one defined
    column names for that file first) and auto-compute all releveant information
-   would be really nice. 
+   would be really nice.
 
-   To Do: Re-write this to use a data class / functions... 
+   To Do: Re-write this to use a data class / functions...
 """
 import matplotlib as _mpl
-_mpl.use('Agg', warn = False)      
+_mpl.use('Agg', warn = False)
 
 import numpy as _np
 from matplotlib import rc as _rc
 from astropy.io import fits
 
 from quenched_galaxies.function_definitions import fit_SFMS
-
+from quenched_galaxies.tools import NoStdStreams
 
 
 # define general plot styles:
@@ -32,7 +32,9 @@ _rc('font', size=fsize)#, ftype=42)
 line_width = 3.5
 point_size = 30
 
-# set data paths
+#
+# set data paths - CHANGE THIS
+#
 _home = "/home/aemerick/code/quenched_galaxies/"
 _data_path = _home + "Data/"
 
@@ -47,27 +49,32 @@ colors = {'Illustris' : 'C9', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 
 data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv",
                # 'Illustris_all'     : "Illustris1_extended_individual_galaxy_values_z0.csv",
                # 'Illustris'         :   "Illustris1_individual_galaxy_values_z0.csv",
-              'Illustris'         : ['Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv',
-                                     'project3_Illustris1_individual_galaxy_values_all1e8Msunh_z0.csv'],
+              'Illustris'         : ['Illustris1_extended_individual_galaxy_values_all1e8Msunh_z0.csv',  #
+                                     'project3_Illustris1_individual_galaxy_values_all1e8Msunh_z0.csv'], #
               #'SAM'               : 'sc_sam_cat_day2.txt', #"SAM_group_catalog.dat",
               'SCSAM'                : 'newSCSAMgalprop.dat',
               'xGASS'             : 'xGASS_representative_sample.ascii.txt',
               #'SAM_cen_and_sat'   : "SAM_group_catalog_cenANDsat.dat",
               'Brooks'            : ["brooks_updated_catalog.dat","brooks.cca.centrals_info.dat"],
+              # MUFASA dataset obtained from Romeel / Mika
               'MUFASA'            : "MUFASA_GALAXY_extra.txt",
               'EAGLE'             : ['0-29810EAGLE_RefL0100Hash_MHIH2Rhalfmass_allabove1.8e8Msun.txt',
                                      '0-29810EAGLE_galIDs_MvirsMdm_RefL0100.txt',
-                                     'EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt', 
+                                     'EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt',
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
                                      'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt',
                                      '0-29810EAGLE_RefL0100Hash_XYZMHIH2RhalfmassOnEoST1e4_allabove1.8e8Msun.txt',
                                      '0-29810EAGLE_galIDs_Aperture30kpc70kpcMstarMgas.txt'],
               'NSA_catalog'       : 'dickey_NSA_iso_lowmass_gals.txt',
+              # MUFASA_ari: mufasa dataset obtained from Ari
               'MUFASA_ari'        : 'ari_mufasa_halos_m50n512_z0.0.txt'}
 
 #
 #
 # Gross bit. Set dtype and format for every column in every data file
+#            this is done to have a somewhat consistent naming scheme
+#            for the data dictionary, even though names are different among
+#            files.
 #
 data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum','r_half_old','log_MHI_old','log_MHI_1Rh_old','log_MHI_2Rh_old','log_MH2_old','log_MH2_1Rh_old','log_MH2_2Rh_old'], 'formats' : ['f8']*9}),
                                _np.dtype( {'names' : ['galaxyID', 'log_Mvir', 'log_MvirMean', 'log_MDM_total'], 'formats' : ['f8']*4}),
@@ -77,7 +84,7 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum','
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum','r_half','log_Mtot','log_Mcold','log_MH_p','log_MHe_p','log_MMet_p','log_MHI','log_MHI_1Rh','log_MHI_2Rh','log_MHI_70','log_MH2','log_MH2_1Rh','log_MH2_2Rh','log_MH2_70'], 'formats' : ['f8']*16  }),
                                _np.dtype( {'names' : ['GalaxyID','log_Mstar_30','log_Mstar_70','log_Mgas_30','log_Mgas_70'], 'formats' : ['f8']*5})],
                'Illustris' : [ _np.dtype( {'names' : ['log_Mstar','sSFR_10Myr','sSFR_20Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI','Z_SF_gas','log_MBH','cen_sat'], 'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']}),
-                               _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh'], 'formats' : ['f8']*13})],
+                               _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh','log_Mvir'], 'formats' : ['f8']*14})],
                #'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
                'SCSAM' : None, # load elsewhere
                'xGASS' : None,
@@ -99,38 +106,43 @@ for k in data_dtypes.keys():
 skip_headers['MUFASA'] = 13
 
 #
-# This is maybe gross, but performs things consistently for all data 
+# This is maybe gross, but performs things consistently for all data.
+#   Loop through all of the datasets above and load them into a dictionary
+#   the temporary dictionary is then used to construct the final dictionary
 #
 _data = {} # to hold actual data
 for k in data_files.keys():
 
-    if not isinstance(data_files[k], basestring): # if multiple files
+    if not isinstance(data_files[k], basestring): # check if multiple files
         _data[k] = [None]*len(data_files[k])
         for i in _np.arange(len(data_files[k])):
             data_path = _data_path + data_files[k][i]
-            _data[k][i]  = _np.genfromtxt( data_path, delimiter = delimiters[k], skip_header = skip_headers[k], dtype = data_dtypes[k][i])
+            _data[k][i]  = _np.genfromtxt( data_path, delimiter = delimiters[k],
+                                           skip_header = skip_headers[k], dtype = data_dtypes[k][i],
+                                           encoding = None)
     else: # single data file to load
         data_path = _data_path + data_files[k]
-        _data[k]  = _np.genfromtxt( data_path, delimiter = delimiters[k], skip_header = skip_headers[k], dtype = data_dtypes[k])
+        _data[k]  = _np.genfromtxt( data_path, delimiter = delimiters[k],
+                                    skip_header = skip_headers[k], dtype = data_dtypes[k],
+                                    encoding = None)
 
-# Filter out some things for specific data sets before making into a dictionary
-_data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1]             # remove satellites
+#
+# Filter out galaxies for specific data sets.
+#
+_data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1] # remove satellites
 
-
-_data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1]       # remove satellites
+_data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1] # remove satellites
 _data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
 
-#  Collate the two Brooks data sets together grabbing only centrals that 
+#  Collate the two Brooks data sets together grabbing only centrals that
 #  exist in both files
 #  - kinda gross, but only option really
-#
-
 # generate list of unique names for all galaxies (Sim name + group number)
 full_names = [None,None]
 for i in [0,1]:
     full_names[i] = [str(_data['Brooks'][i]['Sim'][j])  + str(_data['Brooks'][i]['Grp'][j]) for j in _np.arange(_np.size(_data['Brooks'][i]['Sim']))]
 
-#  Cross-match: second data set is centrals only --- remove entries from first data set if they DNE in second
+#  Cross-match: second Brooks data set is centrals only --- remove entries from first data set if they DNE in second
 select = _np.zeros(_np.size(full_names[0]))
 for i,k in enumerate(full_names[0]):
     select[i] = (k in full_names[1])
@@ -138,14 +150,12 @@ select = select.astype(bool)
 _data['Brooks'][0] = _data['Brooks'][0][ select ]
 
 
-# load scdata
+# load SAM data separately
 scdata = _np.genfromtxt(_data_path + data_files['SCSAM'] , names = True, skip_header = 46)
-scdata = scdata[scdata['sat_type'] == 0]
-scdata = scdata[scdata['mstar'] > 0]
+scdata = scdata[scdata['sat_type'] == 0]  # filter out satellites
+scdata = scdata[scdata['mstar'] > 0]      # filter out galaxies with no stars
 _data['SCSAM'] = scdata
 
-#
-#
 #    remove xGASS detections that are marginal (2), confused (5), or both (3)
 #    take only isolated centrals
 #    including upper limits for now
@@ -158,7 +168,11 @@ xgass = xgass[ xgass['env_code_B'] == 1 ] # isolated centrals
 _data['xGASS'] = xgass
 
 #
-# now for each case, stitch together the files using
+# now for each case, stitch together all data files and datasets to
+# a single, cohesive dictionary. This will be structured so a given PROPERTY
+# of all galaxies for a dataset of SIMULATION_NAME is given as:
+#
+#    data[SIMULATION_NAME][PROPERTY]
 #
 data = {}
 for k in data_files.keys():
@@ -166,17 +180,34 @@ for k in data_files.keys():
     if not isinstance(data_files[k], basestring): # if multiple files
         for i in _np.arange(len(data_files[k])):
             for l in _data[k][i].dtype.names:
-                data[k][l] = _data[k][i][l]        
+                data[k][l] = _data[k][i][l]
     else: # single data file to load
         for l in _data[k].dtype.names:
             data[k][l] = _data[k][l]
 
 #
-# select centrals only from EAGLE dataset
+# Some more filtering. select centrals only from EAGLE dataset
 #
 select = data['EAGLE']['cen_sat'] == 1
 for k in data['EAGLE'].keys():
     data['EAGLE'][k] = data['EAGLE'][k][select]
+
+#
+#
+# The below contains additional field definitions for each data set. Relables
+# some fields and adds new fields of similar names for making life easy later on
+# converts all un-logged fields to logged fields and vice-versa to have stored
+# copies of both in each dataset
+#
+#
+
+
+#
+# WARNING: Hard coding fix to current eagle data. HI and H2 masses are
+#          below what they should be by the below factor. This is only approximate
+#
+for k in ['log_MHI','log_MHI_70']:
+    data['EAGLE'][k] += 0.675
 
 # make sure logged values that are zero are non-zero (set to -99 as flag)
 #
@@ -185,15 +216,17 @@ for k in ['MHI','MH2','MHI_70','MH2_70','Mstar_30','Mstar_70','Mstar','Mgas_30',
     data['EAGLE']['log_' + k] = -99 * _np.ones(_np.size(data['EAGLE'][k]))
     select = data['EAGLE'][k] > 0
     data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
-k = 'MHI_MH2'
-data['EAGLE'][k] = data['EAGLE']['MHI'] + data['EAGLE']['MH2']
-data['EAGLE']['log_' + k] = -99 * _np.ones(_np.size(data['EAGLE'][k]))
-select = data['EAGLE'][k] > 0
-data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
 
-#data['EAGLE']['log_MHI_MH2'] = _np.log10(data['EAGLE']['MHI_MH2'])
+# make a combined HI and H2 for all types of HI and H2
+for k,k1,k2 in [('MHI_MH2','MHI','MH2'),('MHI_MH2_70','MHI_70','MH2_70')]:
+    data['EAGLE'][k] = data['EAGLE'][k1] + data['EAGLE'][k2]
+    data['EAGLE']['log_' + k] = -99 * _np.ones(_np.size(data['EAGLE'][k]))
+    select = data['EAGLE'][k] > 0
+    data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
 
-
+#
+# Do some field defines for the MUFASA datasets
+#
 data['MUFASA_ari']['Mcold'] = data['MUFASA_ari']['MHI'] + data['MUFASA_ari']['MH2']
 data['MUFASA']['MHI'] = 10.0**(data['MUFASA']['log_MHI'])
 data['MUFASA']['MH2'] = 10.0**(data['MUFASA']['log_MH2'])
@@ -208,10 +241,10 @@ for k in data['MUFASA_ari'].keys():
 
 
 
-# screw with SCSAM data
-data['SCSAM']['Mhalo']       = data['SCSAM']['mhalo']        * 1.0E9
-data['SCSAM']['Mstar']       = data['SCSAM']['mstar']        * 1.0E9
-data['SCSAM']['Mcold']       = data['SCSAM']['mcold']        * 1.0E9
+# adjust SCSAM data naming to fit conventions above
+data['SCSAM']['Mhalo']       = data['SCSAM']['mhalo']        * 1.0E9 # convert to Msun
+data['SCSAM']['Mstar']       = data['SCSAM']['mstar']        * 1.0E9 # convert to Msun
+data['SCSAM']['Mcold']       = data['SCSAM']['mcold']        * 1.0E9 # convert to Msun
 data['SCSAM']['SFR_20Myr']   = data['SCSAM']['sfr_ave20M']
 data['SCSAM']['SFR_100Myr']  = data['SCSAM']['sfr_ave100M']
 data['SCSAM']['SFR_1Gyr']    = data['SCSAM']['sfr_ave1G']
@@ -224,6 +257,9 @@ data['SCSAM']['log_SFR_1Gyr']    = _np.log10(data['SCSAM']['sfr_ave1G'])
 for k in ['20Myr','100Myr','1Gyr']:
     data['SCSAM']['log_SFR_' + k][ data['SCSAM']['log_SFR_' + k] == -_np.inf] = -99
 
+#
+# WARNING: Using 20 Myr data as the 10 Myr!!!!
+#
 data['SCSAM']['sSFR_10Myr'] = data['SCSAM']['sSFR_20Myr']
 data['SCSAM']['SFR_10Myr'] = data['SCSAM']['SFR_20Myr']
 data['SCSAM']['log_SFR_10Myr'] = data['SCSAM']['log_SFR_20Myr']
@@ -231,15 +267,13 @@ data['SCSAM']['log_SFR_10Myr'] = data['SCSAM']['log_SFR_20Myr']
 for k in ['SFR_100Myr','sSFR_100Myr','SFR_1Gyr','sSFR_1Gyr', 'Mhalo','Mstar','Mcold']:
     data['SCSAM']['log_' + k] = _np.log10(data['SCSAM'][k])
 
-
+#
 # rename some things in the xGASS dataset
 #
-
 data['xGASS']['log_Mstar'] = data['xGASS']['lgMstar']
 data['xGASS']['SFR']       = data['xGASS']['SFR_best']
 data['xGASS']['log_MHI']   = data['xGASS']['lgMHI']
 data['xGASS']['log_Mhalo'] = data['xGASS']['logMh_Mst_B'] # using group catalog and stellar mass function
-
 
 for k in ['Mstar','MHI', 'Mhalo']:
     data['xGASS'][k] = 10.0**(data['xGASS']['log_' + k])
@@ -248,7 +282,7 @@ for k in ['SFR']:
     data['xGASS']['log_' + k] = -99.0 * _np.ones(_np.size(data['xGASS'][k]))
     select = data['xGASS'][k] > 0
     data['xGASS']['log_' + k][select] = _np.log10(data['xGASS'][k][select])
-data['xGASS']['log_SFR_1Gyr']       = data['xGASS']['log_SFR']    
+data['xGASS']['log_SFR_1Gyr']       = data['xGASS']['log_SFR']
 
 
 # compute some things for Brooks dataset:
@@ -308,7 +342,7 @@ data['Bradford2015']['sSFR_Halpha'] = 10.0**(data['Bradford2015']['log_sSFR_Halp
 
 data['Bradford2015']['log_SFR_1Gyr'] = data['Bradford2015']['log_SFR_Halpha']
 
-print "BRADFORD: ", _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] < -90]), _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] > -90])
+#print "BRADFORD: ", _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] < -90]), _np.size(data['Bradford2015']['Mstar'][data['Bradford2015']['log_SFR_Halpha'] > -90])
 
 #
 # Pre-compute some things for each data set
@@ -338,7 +372,7 @@ for k in data.keys():
 
         data[k]['fgas_1Rh'] = _compute_fgas(data[k]['log_Mstar_1Rh'], data[k][gas_key + '_1Rh'])
         data[k]['fgas_2Rh'] = _compute_fgas(data[k]['log_Mstar_2Rh'], data[k][gas_key + '_2Rh'])
-        
+
 
 #
 #
@@ -368,17 +402,22 @@ for k in ['_10Myr','_100Myr','_1Gyr']:
 #
 
 def _fit_sfms(sim_name, years):
+    """
+    Function to fit the SFMS for each data set and store the result in
+    the dataset dictionary
+    """
     for k in years:
         log_mstar = data[sim_name]['log_Mstar']
         log_sfr   = data[sim_name]['log_SFR_' + k]
 
         # print sim_name, k, _np.min(log_sfr), _np.max(log_sfr), _np.median(log_sfr), _np.min(log_sfr[log_sfr>-99])
         # print sim_name, k, _np.min(log_mstar), _np.max(log_mstar), _np.median(log_mstar)
-        D, m_fit, sfr_fit = fit_SFMS(log_mstar, log_sfr)
+        with NoStdStreams(): # this function call can be loud... keep it quiet
+            D, m_fit, sfr_fit = fit_SFMS(log_mstar, log_sfr)
         data[sim_name]['D_SFMS_' + k] = D
         data[sim_name]['SFMS_fit_' + k] = [m_fit, sfr_fit]
 
-        print sim_name, k, _np.min(D), _np.min(D[D>-99]), _np.max(D), _np.median(D)
+        #print sim_name, k, _np.min(D), _np.min(D[D>-99]), _np.max(D), _np.median(D)
 
     return
 
@@ -397,7 +436,7 @@ _fit_sfms('SCSAM'    , ['20Myr','100Myr','1Gyr'])
 f_HI = 0.735
 HI_APPROXIMATION = True
 if HI_APPROXIMATION: # compute M_HI from M_cold
-    print "CAUTION: HI Approximation on - cold gas mass converted to HI with constant factor of ", f_HI
+    print "CAUTION: HI Approximation on - For data with no explicit HI mass, HI mass is taken as the cold gas mass times the constant factor ", f_HI
     for k in data.keys():
         if k == 'NSA_catalog':
             continue
@@ -426,5 +465,3 @@ brown_15 = {'log_Mstar' : _np.array([9.1984, 9.6298, 10.1451, 10.6245, 11.08389]
 brown_15['MHI']   = 10.0**(brown_15['log_MHI'])
 brown_15['Mstar'] = 10.0**(brown_15['log_Mstar'])
 brown_15['fgas']  = _compute_fgas(brown_15['log_Mstar'], brown_15['log_MHI'])
-
-
