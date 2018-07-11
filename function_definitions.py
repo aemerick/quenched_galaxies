@@ -1,6 +1,25 @@
 import numpy as _np
 from letstalkaboutquench import fstarforms as _fstarforms # fitting routine for SFMS
 
+LOGZERO = -99.0
+
+def compute_fgas(mstar, mgas, log = True):
+
+    if (any(mgas < 0) or any(mstar < 0)) and not log:
+        print "Attempting to compute gas fraction in data with negative values"
+        print " but log is set to False. Are you sure this isn't logged data?"
+        raise ValueError
+
+    if log:
+        fgas = 10**(mgas) / (10**(mstar) + 10**(mgas))
+
+        fgas[mgas == LOGZERO] = 0.0
+
+    else:
+        fgas = mgas / (mstar + mgas)
+
+    return fgas
+
 def _bradford_fgas_limit(mstar):
     """
     Limits pulled from digitized plot
@@ -37,7 +56,7 @@ def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
     # set default behavior unless overridden
     if not 'fit_range' in kwargs.keys():
         min_bin = _np.floor(_np.min(log_mstar))
-        max_bin = _np.ceil(_np.max(log_mstar))  
+        max_bin = _np.ceil(_np.max(log_mstar))
         kwargs['fit_range'] = [min_bin, max_bin]
 
     if not 'method' in kwargs.keys():
@@ -59,12 +78,3 @@ def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
 
 
     return D_SFMS, m_fit, sfr_fit
-    
-        
-        
-
-
-
-    
-    
-    
