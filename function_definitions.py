@@ -72,9 +72,9 @@ def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
     m_fit, sfr_fit = fit.fit(log_mstar, log_SFR, *args, **kwargs)
 
     # return an array of distance to SFMS
-    D_SFMS = _np.ones(_np.size(log_mstar)) * -99 # init to flag
+    D_SFMS = _np.ones(_np.size(log_mstar)) * LOGZERO # init to flag
 
-    D_SFMS[ log_SFR > -99] = log_SFR[ log_SFR > -99] - _np.interp(log_mstar[ log_SFR > -99], m_fit, sfr_fit)
+    D_SFMS[ log_SFR > LOGZERO] = log_SFR[ log_SFR > LOGZERO] - _np.interp(log_mstar[ log_SFR > LOGZERO], m_fit, sfr_fit)
 
 
     return D_SFMS, m_fit, sfr_fit
