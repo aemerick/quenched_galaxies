@@ -60,7 +60,7 @@ def fit_SFMS(log_mstar, log_SFR, *args, **kwargs):
         kwargs['fit_range'] = [min_bin, max_bin]
 
     if not 'method' in kwargs.keys():
-        kwargs['method'] = 'negbinomfit'
+        # kwargs['method'] = 'negbinomfit'
         kwargs['method'] = 'gaussmix'
 
     if not 'Nbin_thresh' in kwargs.keys():
