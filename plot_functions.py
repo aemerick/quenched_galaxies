@@ -16,9 +16,10 @@ _output_dir = './plots/'
 
 
 MSTAR_BINS = np.arange(7.0,13.1,0.2)
-ALL_DATA = ['Illustris','SCSAM' ,'EAGLE','Brooks', 'MUFASA', 'Bradford2015']
-SIM_DATA = ['Illustris','SCSAM' ,'EAGLE','Brooks','MUFASA']
-LSIM_DATA = ['Illustris','EAGLE','MUFASA','SCSAM']
+DEFAULT_SFR = '100Myr' # default sfr to use (10Myr, 100Myr, 1Gyr, etc.)
+ALL_DATA = ['Illustris','SCSAM' ,'EAGLE','MUFASA', 'Bradford2015']
+SIM_DATA = ['Illustris','SCSAM' ,'EAGLE','MUFASA'] # Brooks
+LSIM_DATA = ['Illustris','EAGLE','MUFASA','SCSAM'] # Brooks
 OBS_DATA = ['Bradford2015', 'xGASS']
 
 point_size = 40        # default point size for the above
@@ -109,7 +110,7 @@ def _compute_statistics(x, y, xbins, return_dict = False):
         return centers[select], median[select], std[select], Q1[select], Q3[select], average[select], N[select]
 
 
-def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = '1Gyr',
+def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = DEFAULT_SFR,
               datasets = SIM_DATA, figdim = (2,2)):
     """
     Plot the SFMS fits for each simulation individually as panels. For simplicity,
@@ -440,7 +441,7 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
     return
 
 def plot_fgas_DSFMS_2d_hist(DSFMS_bins = np.arange(-5,3,0.1), fgas_bins = None,
-                            SFR_type = '1Gyr', log_fgas = True, statistic = 'fraction',
+                            SFR_type = DEFAULT_SFR, log_fgas = True, statistic = 'fraction',
                             datasets = SIM_DATA, figdim = (1,4), outstr = ''):
     """
     Plot the gas fraction of galaxies as a function of the distance to the SFMS
@@ -562,7 +563,7 @@ def plot_fgas_DSFMS_2d_hist(DSFMS_bins = np.arange(-5,3,0.1), fgas_bins = None,
     return
 
 def plot_SFMS_2D_hist(mstar_bins = np.arange(8.0,12.6,0.1), sfr_bins = np.arange(-4, 2, 0.1),
-                      remove_zero = True, SFR_type = '1Gyr', log_fgas = False, statistic = 'median',
+                      remove_zero = True, SFR_type = DEFAULT_SFR, log_fgas = False, statistic = 'median',
                       show_fit = True, datasets = SIM_DATA, figdim = (1,4), outstr = ''):
     """
     Plot the SFMS fits for each simulation individually as panels. For simplicity,
@@ -1029,7 +1030,7 @@ def plot_fgas_histograms(mass_bins = np.array([8, 9, 10, 11]),
 
 def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.arange(-5,3,0.2),
                     log_fgas = False,    rhalf = None, remove_zero = False,
-                    datasets = ALL_DATA, SFR_type = '1Gyr', single_SFMS = False,
+                    datasets = ALL_DATA, SFR_type = DEFAULT_SFR, single_SFMS = False,
                     recalculate_SFMS = False, *args, **kwargs):
     """
     Plot gas fraction as a function of the distance to the star forming main sequence
@@ -1201,7 +1202,7 @@ def plot_fgas_DSFMS(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.
 def plot_fgas_DSFMS_panel(method   = 'binned', include_range = 'IQR', DSFMS_bins = np.arange(-5,3,0.2),
                           mass_bins = [8,9,10,11],
                           log_fgas = False,    rhalf = None, remove_zero = False,
-                          datasets = ALL_DATA, SFR_type = '1Gyr', single_SFMS = False,
+                          datasets = ALL_DATA, SFR_type = DEFAULT_SFR, single_SFMS = False,
                           recalculate_SFMS = False, *args, **kwargs):
     """
     Plot gas fraction as a function of the distance to the star forming main sequence
@@ -1703,7 +1704,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
 
 def plot_fgas_ssfr(method = 'scatter', include_range = None,
                    ssfr_bins = np.arange(-15,-8.9,0.2),
-                   ssfr_type = '1Gyr', plot_zeros = False, remove_zeros = False, log_fgas = False,
+                   ssfr_type = DEFAULT_SFR, plot_zeros = False, remove_zeros = False, log_fgas = False,
                    datasets = ALL_DATA, rhalf = None, observational_limits = None, extra_label = '',
                    add_observations = False):
     """
@@ -1891,7 +1892,7 @@ def plot_fgas_ssfr(method = 'scatter', include_range = None,
 
 def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
                               fgas_bins = None, norm = 'fraction',
-                              sSFR_type = '1Gyr', sSFR_alternate = None, log_fgas = False, datasets = ALL_DATA):
+                              sSFR_type = DEFAULT_SFR, sSFR_alternate = None, log_fgas = False, datasets = ALL_DATA):
     """
     Make a panel plot showing distributions of f_gas for each simulation, grouped
     by sSFR.
@@ -2016,7 +2017,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
 
 def plot_sfr_mgas(method = 'binned', include_range = 'IQR',
                   mgas_bins = np.arange(3,12,0.2),
-                  sfr_type = '1Gyr', plot_zeros = False, remove_zeros = False, log_fgas = False,
+                  sfr_type = DEFAULT_SFR, plot_zeros = False, remove_zeros = False, log_fgas = False,
                   datasets = ALL_DATA, rhalf = None, observational_limits = None, extra_label = '' ):
     """
     Plot SFR vs Mgas
@@ -2151,7 +2152,7 @@ if __name__ == "__main__":
     plot_halo_stellar_2D_hist(datasets=LSIM_DATA)
     plot_halo_stellar_2D_hist(datasets=LSIM_DATA, statistic = 'median')
 
-    plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE', 'MUFASA','Brooks' ])
+    plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE', 'MUFASA']) #Brooks
 
     plot_fgas_mstar_2D_hist(datasets = LSIM_DATA)
     plot_fgas_mstar_2D_hist(datasets = LSIM_DATA, log_fgas = True)
@@ -2233,5 +2234,5 @@ if __name__ == "__main__":
     #
     plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = True)
     plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = False)
-    plot_fgas_ssfr_histograms(sSFR_type = '10Myr', sSFR_alternate = '20Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ])
-    plot_fgas_ssfr_histograms(sSFR_type = '10Myr', sSFR_alternate = '20Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = True)
+    plot_fgas_ssfr_histograms(sSFR_type = '100Myr', sSFR_alternate = '100Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ])
+    plot_fgas_ssfr_histograms(sSFR_type = '100Myr', sSFR_alternate = '100Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = True)

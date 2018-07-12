@@ -433,12 +433,12 @@ def _fit_sfms(sim_name, years):
     return
 
 
-_fit_sfms('Illustris', ['10Myr','20Myr','1Gyr'])
+_fit_sfms('Illustris', ['0Myr','10Myr','20Myr','100Myr','1Gyr'])
 # _fit_sfms('Brooks'   , ['100Myr','1Gyr'])
-_fit_sfms('EAGLE'    , ['10Myr','1Gyr'])
+_fit_sfms('EAGLE'    , ['10Myr','100Myr','1Gyr'])
 _fit_sfms('MUFASA'   , ['10Myr','100Myr','1Gyr'])
 _fit_sfms('MUFASA_ari'   , ['10Myr','100Myr','1Gyr'])
-_fit_sfms('SCSAM'    , ['20Myr','100Myr','1Gyr'])
+_fit_sfms('SCSAM'    , ['10Myr','20Myr','100Myr','1Gyr'])
 
 
 
