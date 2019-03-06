@@ -61,6 +61,8 @@ def _select_scatter_points(x, xbins, threshold = 10):
 
     return scatter_select, scatter_select == 0
 
+
+
 def _compute_statistics(x, y, xbins, return_dict = False):
     """
     Function to compute statistics on 'y' in each 'xbin'. Original
