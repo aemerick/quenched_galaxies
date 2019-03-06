@@ -32,6 +32,8 @@ _rc('font', size=fsize)#, ftype=42)
 line_width = 3.5
 point_size = 30
 
+INCLUDE_SATELLITES = True
+
 #
 # set data paths - CHANGE THIS
 #
@@ -131,10 +133,10 @@ for k in data_files.keys():
 #
 # Filter out galaxies for specific data sets.
 #
-_data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1] # remove satellites
-
-_data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1] # remove satellites
-_data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
+if not INCLUDE_SATELLITES:
+    _data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1] # remove satellites
+    _data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1] # remove satellites
+    _data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
 
 #  Collate the two Brooks data sets together grabbing only centrals that
 #  exist in both files
@@ -154,7 +156,8 @@ _data['Brooks'][0] = _data['Brooks'][0][ select ]
 
 # load SAM data separately
 scdata = _np.genfromtxt(_data_path + data_files['SCSAM'] , names = True, skip_header = 39 ) # 46)
-scdata = scdata[scdata['sat_type'] == 0]  # filter out satellites
+if not INCLUDE_SATELLITES:
+    scdata = scdata[scdata['sat_type'] == 0]  # filter out satellites
 scdata = scdata[scdata['Mstar'] > 0]      # filter out galaxies with no stars
 _data['SCSAM'] = scdata
 
@@ -190,9 +193,10 @@ for k in data_files.keys():
 #
 # Some more filtering. select centrals only from EAGLE dataset
 #
-select = data['EAGLE']['cen_sat'] == 1
-for k in data['EAGLE'].keys():
-    data['EAGLE'][k] = data['EAGLE'][k][select]
+if not INCLUDE_SATELLITES:
+    select = data['EAGLE']['cen_sat'] == 1
+    for k in data['EAGLE'].keys():
+        data['EAGLE'][k] = data['EAGLE'][k][select]
 
 #
 #
@@ -576,3 +580,13 @@ brown_15 = {'log_Mstar' : _np.array([9.1984, 9.6298, 10.1451, 10.6245, 11.08389]
 brown_15['MHI']   = 10.0**(brown_15['log_MHI'])
 brown_15['Mstar'] = 10.0**(brown_15['log_Mstar'])
 brown_15['fgas']  = compute_fgas(brown_15['log_Mstar'], brown_15['log_MHI'])
+#
+#
+#
+#
+#
+#
+data['EAGLE']['volume']     = (100.0)**3
+data['MUFASA']['volume']    = (50.0)**3
+data['Illustris']['volume'] = (100.0)**3
+data['SCSAM']['volume']     = (100.0)**3
