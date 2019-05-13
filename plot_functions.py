@@ -127,7 +127,7 @@ def plot_SFMS(mstar_bins = MSTAR_BINS, remove_zero = True, SFR_type = DEFAULT_SF
         figdim = (1, len(datasets))
 
     fig, ax = plt.subplots(figdim[0],figdim[1]) # hard coded for now - not good
-    fig.set_size_inches(12,12)
+    fig.set_size_inches(figdim[1]*6,figdim[0]*6)
 
     axi, axj = 0, 0
     for k in datasets:
@@ -331,13 +331,20 @@ def plot_fgas_mstar_2D_hist(mstar_bins = np.arange(8.0, 12.6, 0.1), fgas_bins = 
             fgas_bins = np.linspace(-4, 0, np.size(mstar_bins))
         else:
             fgas_bins = np.linspace(0.0, 1.0, np.size(mstar_bins))
+
+    if halo_ratio:
+        xpos_label = -3.75
+    else:
+        if log_fgas:
+            xpos_label = 8.25
+        else:
+            xpos_label = 11.
+
     if log_fgas:
         ylabel = r'log(f$_{\rm gas}$)'
-        xpos_label = 8.5
         ypos_label = -3.75
     else:
         ylabel = r'f$_{\rm gas}$'
-        xpos_label = 11.
         ypos_label = 0.925
 
     fig, ax = plt.subplots(figdim[0],figdim[1], sharey=True, sharex=True)  # change hard coding
@@ -548,7 +555,10 @@ def plot_fgas_DSFMS_2d_hist(DSFMS_bins = np.arange(-5,3,0.1), fgas_bins = None,
 
         ax[axi].set_xlim(DSFMS_bins[0], DSFMS_bins[-1])
         ax[axi].set_ylim(fgas_bins[0], fgas_bins[-1])
-        #ax[axi].text(8.2, 1.5, k)
+        if log_fgas:
+            ax[axi].text(-4.0,-0.25,k)
+        else:
+            ax[axi].text(-4.0, 0.9, k)
 
         plt.minorticks_on()
 
@@ -1953,7 +1963,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
             select    = ssfr == 0.0
             fgas_data = fgas[select] # fgas
             if not log_fgas:
-                print "NO SF in last    type    label    size_full_data   size fgas < 0.1     fraction f_gas > 0    median f_gas   max f_gas"                
+                print "NO SF in last    type    label    size_full_data   size fgas < 0.1     fraction f_gas > 0    median f_gas   max f_gas"
                 print 'NO SF in last ', sSFR_type, label, np.size(fgas_data), np.size(fgas_data[fgas_data < 0.1]), np.size(fgas_data)/(1.0*np.size(fgas)), np.median(fgas_data), np.max(fgas_data)
 
         hist, bins  = np.histogram( fgas_data, bins = fgas_bins)
