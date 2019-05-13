@@ -32,7 +32,8 @@ _rc('font', size=fsize)#, ftype=42)
 line_width = 3.5
 point_size = 30
 
-INCLUDE_SATELLITES = True
+# flag to turn on / off inclusion of satellites in computation
+INCLUDE_SATELLITES = False
 
 #
 # set data paths - CHANGE THIS
@@ -40,9 +41,12 @@ INCLUDE_SATELLITES = True
 _home = "/home/aemerick/code/quenched_galaxies/"
 _data_path = _home + "Data/"
 
+#
 # set colors associated with datasets
+#
 colors = {'Illustris' : 'C9', 'SCSAM' : 'C1', 'MUFASA' : 'C2', 'Brooks' : 'C3', 'EAGLE' : 'C0', 'Bradford2015' : 'C5',
-          'catinella13' : 'C4', 'brown15' : 'black', 'MUFASA_ari' : 'navy', 'xGASS' : 'black'}
+          'catinella13' : 'C4', 'brown15' : 'black', 'MUFASA_ari' : 'navy', 'xGASS' : 'black',
+          'Romulus25' : 'C8'}
 
 #
 # Data file paths. If multiple for a single dataset, give as list. This is handled later to combine to single
@@ -65,12 +69,14 @@ data_files = { # 'Illustris_extended': "Illustris1_extended_individual_galaxy_va
                                      'EAGLE_RefL0100_Mcoldgas_allabove1.8e8Msun.txt',
                                      'EAGLE_RefL0100_Mstarin12HalfMassRadStars_allabove1.8e8Msun.txt',
                                      'EAGLE_RefL0100_MstarSFR_allabove1.8e8Msun.txt',
-                                     '0-29810EAGLE_RefL0100Hash_XYZMHIH2RhalfmassOnEoST1e4_allabove1.8e8Msun.txt',
+                                     #'0-29810EAGLE_RefL0100Hash_XYZMHIH2RhalfmassOnEoST1e4_allabove1.8e8Msun.txt', # this file has incorrect HI and H2 measurements
                                      '0-29810EAGLE_galIDs_Aperture30kpc70kpcMstarMgas.txt',
-                                     'EAGLE_RefL0100_MstarSFR100Myr_allabove1.8e8Msun.txt'],
+                                     'EAGLE_RefL0100_MstarSFR100Myr_allabove1.8e8Msun.txt',
+                                     'EAGLE_RefL0100HashPhotfix_likeCrain2016_MstarHIH2HIISFRlargerT1e4_allabove1.8e8Msun.txt'], # the HI and H2 values here should be correct
               'NSA_catalog'       : 'dickey_NSA_iso_lowmass_gals.txt',
               # MUFASA_ari: mufasa dataset obtained from Ari
-              'MUFASA_ari'        : 'halos_m50n512_z0.0.txt'}
+              'MUFASA_ari'        : 'halos_m50n512_z0.0.txt',
+              'Romulus25' : 'Romulus25Data.dat'}
 
 #
 #
@@ -84,9 +90,10 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum','
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mcold'], 'formats' : ['f8','f8','f8']}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'r_half', 'log_Mstar', 'log_Mstar_1Rh', 'log_Mstar_2Rh'], 'formats':['f8']*6}),
                                _np.dtype( {'names' : ['GroupNum','SubGroupNum', 'log_Mstar', 'SFR_10Myr', 'SFR_1Gyr', 'cen_sat'], 'formats' : ['f8','f8','f8','f8','f8','f8']}),
-                               _np.dtype( {'names' : ['GroupNum','SubGroupNum','r_half','log_Mtot','log_Mcold','log_MH_p','log_MHe_p','log_MMet_p','log_MHI','log_MHI_1Rh','log_MHI_2Rh','log_MHI_70','log_MH2','log_MH2_1Rh','log_MH2_2Rh','log_MH2_70'], 'formats' : ['f8']*16  }),
+                               #_np.dtype( {'names' : ['GroupNum','SubGroupNum','r_half','log_Mtot','log_Mcold','log_MH_p','log_MHe_p','log_MMet_p','log_MHI','log_MHI_1Rh','log_MHI_2Rh','log_MHI_70','log_MH2','log_MH2_1Rh','log_MH2_2Rh','log_MH2_70'], 'formats' : ['f8']*16  }),
                                _np.dtype( {'names' : ['GalaxyID','log_Mstar_30','log_Mstar_70','log_Mgas_30','log_Mgas_70'], 'formats' : ['f8']*5}),
-                               _np.dtype( {'names' : ['GroupNum','SubGroupNum','log_Mstar','SFR_10Myr','SFR_100Myr','cen_sat'], 'formats' : ['f8']*6})],
+                               _np.dtype( {'names' : ['GroupNum','SubGroupNum','log_Mstar','SFR_10Myr','SFR_100Myr','cen_sat'], 'formats' : ['f8']*6}),
+                               _np.dtype( {'names' : ['GroupNum','SubGroupNum','log_Mstar_30','log_MHI','log_MH2','log_MH2_70','log_MHII','log_MHII_70'], 'formats' : ['f8']*8 }) ],
                'Illustris' : [ _np.dtype( {'names' : ['log_Mstar','sSFR_0Myr','sSFR_10Myr','sSFR_20Myr','sSFR_100Myr','sSFR_1Gyr','log_MHI','sigma_8','log_SF_MHI','Z_SF_gas','log_MBH','cen_sat'], 'formats': ['f8','f8','f8','f8','f8','f8','f8','f8','f8','f8','f8','u1']}),
                                _np.dtype( {'names' : ['r_half', 'log_Mstar_1Rh', 'log_Mstar_2Rh', 'log_MHI_1Rh', 'log_MHI_2Rh', 'log_Mcold_1Rh', 'log_Mcold_2Rh', 'SFR_0_1Rh',' SFR_0_2Rh', 'SFR_100Myr_1Rh','SFR_100Myr_2Rh','SFR_1Gyr_1Rh','SFR_2Gyr_2Rh','log_Mvir'], 'formats' : ['f8']*14})],
                #'SAM'       :   _np.dtype( {'names' : ['log_Mstar','log_sSFR_100kyr','log_sSFR_100Myr','log_Mcold','sigma_8','log_MBH'], 'formats': ['f8']*6}),
@@ -96,14 +103,21 @@ data_dtypes = {'EAGLE'     : [ _np.dtype( {'names' : ['GroupNum','SubGroupNum','
                'Brooks'    : [ _np.dtype( {'names' : ['Sim','Grp','Mstar','Mvir','SFR_10Myr','SFR_1Gyr','time_last_SF','MHI', 'X','Y','Z','VX','VY','VZ','parent'], 'formats' : ['U5','U3'] + ['f8']*12 + ['u1']}),
                                _np.dtype( {'names' : ['Sim','Grp','r_half','Mstar_1Rh','Mstar_2Rh','MHI_1Rh','MHI_2Rh','MHI','Mcold_1Rh','Mcold_2Rh','Mcold','Mstar_100Myr_1Rh','Mstar_1Gyr_1Rh','Mstar_100Myr_2Rh','Mstar_1Gyr_2Rh','Mstar_100Myr','Mstar_1Gyr'], 'formats' : ['U5','U3'] + ['f8']*15})],
                'NSA_catalog' : _np.dtype({'names' : ['NSAID', 'log_Mstar', 'DHOST', 'D4000', 'HAEW', 'HALPHA_SFR', 'HALPHA_SSFR'] , 'formats' : ['int'] + ['f8']*6}),
-               'MUFASA_ari' : _np.dtype({'names' : ['Mhalo','Mstar','MHI','MH2','SFR'], 'formats' : ['f8']*5})
+               'MUFASA_ari' : _np.dtype({'names' : ['Mhalo','Mstar','MHI','MH2','SFR'], 'formats' : ['f8']*5}),
+               'Romulus25Data' : _np.dtype({'names' : ['ID','Mhalo','Mstar','Mgas','M_HI','cen_sat','xcen','ycen','zcen','vx','vy','vz','SFR_1Gyr','SFR_100Myr','SFR_10Myr'], 'formats' : ['int'] + ['f8']*4 + ['U9'] + ['f8']*9 })
               }
 
+#
+# Assign general delimiters in each file, followed by special cases
+#
 delimiters = {} # assign delimiters and exceptions
 for k in data_dtypes.keys():
     delimiters[k] = None
 delimiters['Illustris']  = ','
 
+#
+# Assign general headers for each file, followed by sepcial cases
+#
 skip_headers = {} # assign skip headers and exceptions
 for k in data_dtypes.keys():
     skip_headers[k] = 1
@@ -119,7 +133,7 @@ for k in data_files.keys():
 
     if not isinstance(data_files[k], basestring): # check if multiple files
         _data[k] = [None]*len(data_files[k])
-        for i in _np.arange(len(data_files[k])):
+        for i in _np.arange(len(data_files[k])): # load all files into temp dict
             data_path = _data_path + data_files[k][i]
             _data[k][i]  = _np.genfromtxt( data_path, delimiter = delimiters[k],
                                            skip_header = skip_headers[k], dtype = data_dtypes[k][i],
@@ -134,14 +148,21 @@ for k in data_files.keys():
 # Filter out galaxies for specific data sets.
 #
 if not INCLUDE_SATELLITES:
-    _data['MUFASA']    = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1] # remove satellites
-    _data['Illustris'][1] = _data['Illustris'][1][ _data['Illustris'][0]['cen_sat'] == 1] # remove satellites
-    _data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
+    _data['MUFASA']       = _data['MUFASA'][ _data['MUFASA']['cen_sat'] == 1] # remove satellites
 
+    illustris_select = _data['Illustris'][0]['cen_sat'] == 1
+    for i in np.arange(np.size(_data['Illustris'])):
+        _data['Illustris'][i] = _data['Illustris'][i][illustris_select] # remove satellites
+
+    #_data['Illustris'][0] = _data['Illustris'][0][ _data['Illustris'][0]['cen_sat'] == 1]
+
+    _data['Romulus25'] = _data['Romulus25'][ _data['Romulus25']['cen_sat'] == 'central' ]
+
+# -------------------------------
 #  Collate the two Brooks data sets together grabbing only centrals that
 #  exist in both files
-#  - kinda gross, but only option really
-# generate list of unique names for all galaxies (Sim name + group number)
+#               - kinda gross, but only option really
+#               generate list of unique names for all galaxies (Sim name + group number)
 full_names = [None,None]
 for i in [0,1]:
     full_names[i] = [str(_data['Brooks'][i]['Sim'][j])  + str(_data['Brooks'][i]['Grp'][j]) for j in _np.arange(_np.size(_data['Brooks'][i]['Sim']))]
@@ -152,15 +173,20 @@ for i,k in enumerate(full_names[0]):
     select[i] = (k in full_names[1])
 select = select.astype(bool)
 _data['Brooks'][0] = _data['Brooks'][0][ select ]
+# ------------------------------------
 
-
-# load SAM data separately
+#
+# load SAM data separately - read in names directly since there area a ton of columns
+#
 scdata = _np.genfromtxt(_data_path + data_files['SCSAM'] , names = True, skip_header = 39 ) # 46)
 if not INCLUDE_SATELLITES:
     scdata = scdata[scdata['sat_type'] == 0]  # filter out satellites
 scdata = scdata[scdata['Mstar'] > 0]      # filter out galaxies with no stars
 _data['SCSAM'] = scdata
 
+#
+# Observational data
+#
 #    remove xGASS detections that are marginal (2), confused (5), or both (3)
 #    take only isolated centrals
 #    including upper limits for now
@@ -212,23 +238,25 @@ if not INCLUDE_SATELLITES:
 # WARNING: Hard coding fix to current eagle data. HI and H2 masses are
 #          below what they should be by the below factor. This is only approximate
 #
-for k in ['log_MHI','log_MHI_70']:
-    data['EAGLE'][k] += 0.675
+# for k in ['log_MHI','log_MHI_70']:
+#     data['EAGLE'][k] += 0.675
 
 # make sure logged values that are zero are non-zero (set to LOGZERO as flag)
 #
 for k in ['MHI','MH2','MHI_70','MH2_70','Mstar_30','Mstar_70','Mstar','Mgas_30','Mgas_70','Mcold','MHI_old','MH2_old','MH_p','MHe_p']:
-    data['EAGLE'][k] = 10.0**(data['EAGLE']['log_' + k])
-    data['EAGLE']['log_' + k] = LOGZERO * _np.ones(_np.size(data['EAGLE'][k]))
-    select = data['EAGLE'][k] > 0
-    data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
+    if k in data['EAGLE']:
+        data['EAGLE'][k] = 10.0**(data['EAGLE']['log_' + k])
+        data['EAGLE']['log_' + k] = LOGZERO * _np.ones(_np.size(data['EAGLE'][k]))
+        select = data['EAGLE'][k] > 0
+        data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
 
 # make a combined HI and H2 for all types of HI and H2
 for k,k1,k2 in [('MHI_MH2','MHI','MH2'),('MHI_MH2_70','MHI_70','MH2_70')]:
-    data['EAGLE'][k] = data['EAGLE'][k1] + data['EAGLE'][k2]
-    data['EAGLE']['log_' + k] = LOGZERO * _np.ones(_np.size(data['EAGLE'][k]))
-    select = data['EAGLE'][k] > 0
-    data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
+    if (k1 in data['EAGLE']) and (k2 in data['EAGLE']):
+        data['EAGLE'][k] = data['EAGLE'][k1] + data['EAGLE'][k2]
+        data['EAGLE']['log_' + k] = LOGZERO * _np.ones(_np.size(data['EAGLE'][k]))
+        select = data['EAGLE'][k] > 0
+        data['EAGLE']['log_' + k][select] = _np.log10(data['EAGLE'][k][select])
 
 #
 # Do some field defines for the MUFASA datasets
@@ -264,7 +292,15 @@ for k in ['10Myr','100Myr','1Gyr']:
     data['MUFASA_ari']['log_sSFR_' + k][x>0] = _np.log10(x[x>0]) / data['MUFASA_ari']['Mstar'][x>0]
 
 
+for k in ['10Myr','100Myr','1Gyr']:
+    x = data['Romulus25']['SFR_' + k]
 
+    data['Romulus25']['log_SFR_' + k] = LOGZERO * _np.ones(_np.size(x))
+    data['Romulus25']['log_SFR_' + k][x > 0] = _np.log10(x[x>0])
+
+    data['Romulus25']['sSFR_' + k]            = x / data['Romulus25']['Mstar']
+    data['Romulus25']['log_sSFR_' + k]        = LOGZERO * _np.ones(_np.size(x))
+    data['Romulus25']['log_sSFR_' + k][x > 0] = _np.log10(x[x>0] / data['Romulus25']['Mstar'][x>0]))
 
 
 
@@ -443,6 +479,7 @@ _fit_sfms('EAGLE'    , ['10Myr','100Myr','1Gyr'])
 _fit_sfms('MUFASA'   , ['10Myr','100Myr','1Gyr'])
 _fit_sfms('MUFASA_ari'   , ['10Myr','100Myr','1Gyr'])
 _fit_sfms('SCSAM'    , ['10Myr','20Myr','100Myr','1Gyr'])
+_fit_sfms('Romulus25'   , ['10Myr','100Myr','1Gyr'])
 
 
 
@@ -500,6 +537,9 @@ for simname in data.keys():
     data[simname]['log_Mcold_gas'][ data[simname]['Mcold_gas'] > 0.0 ] = _np.log10( data[simname]['Mcold_gas'][data[simname]['Mcold_gas']>0.0])
 
 
+#
+# Compute gas fractions (by various definitions) for all simulations 
+#
 for simname in data.keys():
     if simname == 'NSA_catalog':
         continue
@@ -590,3 +630,4 @@ data['EAGLE']['volume']     = (100.0)**3
 data['MUFASA']['volume']    = (50.0)**3
 data['Illustris']['volume'] = (100.0)**3
 data['SCSAM']['volume']     = (100.0)**3
+data['Romulus25']['volume'] = (25.0)**3
