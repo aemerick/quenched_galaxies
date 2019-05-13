@@ -17,9 +17,12 @@ _output_dir = './plots/'
 
 MSTAR_BINS = np.arange(7.0,13.1,0.2)
 DEFAULT_SFR = '100Myr' # default sfr to use (10Myr, 100Myr, 1Gyr, etc.)
-ALL_DATA = ['Illustris','SCSAM' ,'EAGLE','MUFASA', 'Bradford2015']
-SIM_DATA = ['Illustris','SCSAM' ,'EAGLE','MUFASA'] # Brooks
-LSIM_DATA = ['Illustris','EAGLE','MUFASA','SCSAM'] # Brooks
+#
+# Add simulation names to these global dicts for plotting
+#
+ALL_DATA = ['Illustris','SCSAM' ,'EAGLE','MUFASA','Romulus25', 'Bradford2015']
+SIM_DATA = ['Illustris','SCSAM' ,'EAGLE','MUFASA','Romulus25'] # Brooks
+LSIM_DATA = ['Illustris','EAGLE','MUFASA','SCSAM','Romulus25'] # Brooks
 OBS_DATA = ['Bradford2015', 'xGASS']
 
 point_size = 40        # default point size for the above
@@ -1950,6 +1953,7 @@ def plot_fgas_ssfr_histograms(ssfr_bins = np.array([-20,-13,-12,-11,-10,-9]),
             select    = ssfr == 0.0
             fgas_data = fgas[select] # fgas
             if not log_fgas:
+                print "NO SF in last    type    label    size_full_data   size fgas < 0.1     fraction f_gas > 0    median f_gas   max f_gas"                
                 print 'NO SF in last ', sSFR_type, label, np.size(fgas_data), np.size(fgas_data[fgas_data < 0.1]), np.size(fgas_data)/(1.0*np.size(fgas)), np.median(fgas_data), np.max(fgas_data)
 
         hist, bins  = np.histogram( fgas_data, bins = fgas_bins)
@@ -2154,7 +2158,7 @@ if __name__ == "__main__":
     plot_halo_stellar_2D_hist(datasets=LSIM_DATA)
     plot_halo_stellar_2D_hist(datasets=LSIM_DATA, statistic = 'median')
 
-    plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE', 'MUFASA']) #Brooks
+    plot_sfr_mgas(datasets=['Illustris','SCSAM','EAGLE', 'MUFASA', 'Romulus25']) #Brooks
 
     plot_fgas_mstar_2D_hist(datasets = LSIM_DATA)
     plot_fgas_mstar_2D_hist(datasets = LSIM_DATA, log_fgas = True)
@@ -2228,13 +2232,13 @@ if __name__ == "__main__":
 
     # do above as histograms
     #
-    plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ,'Bradford2015'])
-    plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE',  'MUFASA' ,'Bradford2015'])
+    plot_fgas_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' , 'Romulus25', 'Bradford2015'])
+    plot_fgas_histograms(fgas_bins = np.arange(-3, 0.01, 0.1) , log_fgas = True, datasets = ['Illustris', 'SCSAM', 'EAGLE',  'MUFASA' , 'Romulus25', 'Bradford2015'])
 
     #
     # gas fraction as a function of ssfr histograms
     #
-    plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = True)
-    plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = False)
-    plot_fgas_ssfr_histograms(sSFR_type = '100Myr', sSFR_alternate = '100Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ])
-    plot_fgas_ssfr_histograms(sSFR_type = '100Myr', sSFR_alternate = '100Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' ], log_fgas = True)
+    plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' , 'Romulus25'], log_fgas = True)
+    plot_fgas_ssfr_histograms(datasets = ['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' , 'Romulus25' ], log_fgas = False)
+    plot_fgas_ssfr_histograms(sSFR_type = '100Myr', sSFR_alternate = '100Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA' , 'Romulus25' ])
+    plot_fgas_ssfr_histograms(sSFR_type = '100Myr', sSFR_alternate = '100Myr', datasets =['Illustris', 'SCSAM', 'EAGLE', 'MUFASA', 'Romulus25'  ], log_fgas = True)
