@@ -845,7 +845,7 @@ def plot_gas_mass_stellar_mass(method = 'scatter', include_range = None,
                 if ( not data[k].has_key('log_Mcold' + rhalf_str)):
                     print 'missing Rhalf info for ', k,' continuing'
                     continue
-
+                print "TAKING MCOLD INSTEAD OF MHI", k
                 y = data[k]['log_Mcold' + rhalf_str]
 
             # function assumes that y is logged
@@ -1519,7 +1519,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
         ax.set_ylabel(r'f$_{\rm gas}$')
     elif method == 'binned':
 
-        def _compute_and_plot(axis,xdata,ydata, mgas, SFR,
+        def _compute_and_plot(axis,xdata,ydata, mgas, sSFR,
                               xbins, label, *args, **kwargs):
             # helper generic function to compute and then plot the data with fills
 
@@ -1547,6 +1547,8 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                 yscatter = np.log10(ydata[scatter_select])
             else:
                 yscatter = ydata[scatter_select]
+
+            num_points = np.size(xdata)
 
             axis.scatter(xdata[scatter_select], yscatter, s = point_size, **kwargs)
 
@@ -1582,6 +1584,10 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                     fill_low = np.log10(fill_low)
                     median   = np.log10(median)
 
+                if not (sSFR_cut is None):
+                    if (sSFR_cut[0] == -np.inf) and (sSFR_cut[1] < -15):
+                        label = label + " -  %2.3f %%"%(num_points / (np.size(data[k]['log_Mstar'])*1.0) * 100.0)
+
                 axis.plot(x, median, lw = line_width, label = label, *args, **kwargs)
                 #print label, x, median
 
@@ -1594,7 +1600,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
                 axis.fill_between(x, fill_low, fill_up, facecolor = facecolor,
                                 interpolate = True, lw = line_width, alpha = 0.25, *args, **kwargs)
 
-            return
+            return num_points
 
         # plot each data source
         for k in datasets:
@@ -1619,10 +1625,11 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
             if 'log_sSFR_1Gyr' in data[k].keys():
                 sSFR = data[k]['log_sSFR_1Gyr']
             elif not (sSFR_cut is None):
+                print k, "SKIPPING SSFR CUT"
                 continue # skip if no data available on SFR and we make SFR cut
 
             # send off to plotter routine - mgas is for making cuts
-            _compute_and_plot(ax, x, y, mgas, sSFR, mstar_bins, k, color = colors[k])
+            num_points = _compute_and_plot(ax, x, y, mgas, sSFR, mstar_bins, k, color = colors[k])
 
 
         if not (rhalf is None):
@@ -1703,7 +1710,7 @@ def plot_fgas_mstar(method = 'scatter', include_range = None,
     if observational_limits == 'Bradford':
         outname += '_bradford_fgas_cut'
         ax.set_title(r'With Bradford 2015 f$_{\rm gas}$ Cut')
-    else:
+    elif (not remove_zero):
         ax.set_title(r'Including M$_{\rm gas} = 0$')
 
     if not (sSFR_cut is None):
@@ -2230,6 +2237,8 @@ if __name__ == "__main__":
     fgas_MStar_data_obs = ALL_DATA #+ ['MUFASA']
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = LSIM_DATA,
                     log_fgas = True, sSFR_cut = (-np.inf, -90), remove_zero = True)
+    plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = LSIM_DATA,
+                    log_fgas = True, sSFR_cut = (-np.inf, -90), remove_zero = False)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', datasets = fgas_MStar_data)
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', observational_limits = 'Bradford', datasets = fgas_MStar_data_obs + ['xGASS'])
     plot_fgas_mstar(method = 'binned', include_range = 'IQR', log_fgas = True, datasets = fgas_MStar_data)
